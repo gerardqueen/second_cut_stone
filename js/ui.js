@@ -3,6 +3,7 @@ import { SETTINGS, DEMO_MODE } from './config.js';
 import { logoSVG } from './logo.js';
 import { money } from './pricing.js';
 import { SHAPES, SHAPE_KEYS, SHAPE_ICONS, geometry } from './shapes.js';
+import { profileSVG, profileOf } from './profiles.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -104,7 +105,6 @@ export const media = (o, size) =>
  */
 export function pieceBuilder(root, finishes, { onChange, idPrefix = root.id } = {}) {
   const state = { shape: 'rectangle', dims: {}, modes: {}, hand: 'left', edges: {} };
-  const opt = finishes.map((f) => `<option value="${esc(f.id)}">${esc(f.name)} · ${money(f.price_per_m).replace('.00', '')}/m</option>`).join('');
 
   root.innerHTML = `
     <div class="builder">
@@ -184,12 +184,11 @@ export function pieceBuilder(root, finishes, { onChange, idPrefix = root.id } = 
     edgeGrid.innerHTML = edges.map((e, i) => `
       <div class="field">
         <label for="${idPrefix}-edge-${e.key}">${numbered ? `<span class="edge-no">${i + 1}</span>` : ''}${esc(e.label)}${e.curved && edges.length > 1 ? ' <span class="muted">· curved</span>' : ''}</label>
-        <select id="${idPrefix}-edge-${e.key}" data-edge="${e.key}"><option value="">Unfinished</option>${opt}</select>
+        ${finishPickerHTML(`${idPrefix}-edge-${e.key}`, e.key, finishes)}
       </div>`).join('');
-    $$('[data-edge]', edgeGrid).forEach((s) => {
-      s.value = state.edges[s.dataset.edge] || '';
-      s.addEventListener('change', () => { state.edges[s.dataset.edge] = s.value; draw(); emit(); });
-    });
+    $$('.fp', edgeGrid).forEach((el) => bindFinishPicker(el, finishes, state.edges[el.dataset.edge] || '', (v) => {
+      state.edges[el.dataset.edge] = v; draw(); emit();
+    }));
     const keys = edges.map((e) => e.key);
     const chips = [['none', 'No finished edges'], ['all', edges.length === 1 ? 'Finish the edge' : 'All edges']];
     if (keys.includes('front') && edges.length > 2) chips.splice(1, 0, ['front', 'Front only']);
@@ -203,7 +202,7 @@ export function pieceBuilder(root, finishes, { onChange, idPrefix = root.id } = 
         exposed: ['front', 'returnFront', 'runEnd', 'returnEnd'],
       }[b.dataset.quick];
       for (const k of keys) state.edges[k] = want.includes(k) ? (state.edges[k] || def) : '';
-      $$('[data-edge]', edgeGrid).forEach((s) => (s.value = state.edges[s.dataset.edge] || ''));
+      $$('.fp', edgeGrid).forEach((el) => el.fpSet(state.edges[el.dataset.edge] || ''));
       draw(); emit();
     }));
   }
@@ -310,4 +309,54 @@ function sampleDims(shape) {
     oval: { length: 1000, width: 600 }, semicircle: { diameter: 900 },
     lshape: { length: 2000, depth: 600, returnLength: 1400, returnDepth: 600 },
   }[shape];
+}
+
+// ---------- Finish picker (a drop-down that shows each edge profile) ----------
+const finishLabel = (f) => f
+  ? `${profileSVG(profileOf(f), { size: 44 })}<span class="fp-name">${esc(f.name)}</span><span class="fp-price">${money(f.price_per_m).replace('.00', '')}/m</span>`
+  : `${profileSVG('sawn', { size: 44 })}<span class="fp-name">Unfinished</span><span class="fp-price">Free</span>`;
+
+export function finishPickerHTML(id, edgeKey, finishes) {
+  return `<div class="fp" data-edge="${esc(edgeKey)}">
+    <button type="button" class="fp-btn" id="${esc(id)}" aria-haspopup="listbox" aria-expanded="false"></button>
+    <ul class="fp-list" role="listbox" tabindex="-1" hidden>
+      <li role="option" data-value="" tabindex="-1">${finishLabel(null)}<small>Sawn edge, for sides against a wall or unit</small></li>
+      ${finishes.map((f) => `<li role="option" data-value="${esc(f.id)}" tabindex="-1">${finishLabel(f)}${f.description ? `<small>${esc(f.description)}</small>` : ''}</li>`).join('')}
+    </ul>
+  </div>`;
+}
+
+let openPicker = null;
+document.addEventListener('click', (e) => { if (openPicker && !openPicker.contains(e.target)) openPicker.fpClose(); });
+
+export function bindFinishPicker(el, finishes, value, onChange) {
+  const btn = $('.fp-btn', el), list = $('.fp-list', el), opts = $$('[role=option]', list);
+  let current = value;
+  const render = () => {
+    btn.innerHTML = `${finishLabel(finishes.find((f) => f.id === current))}<span class="fp-caret" aria-hidden="true">▾</span>`;
+    opts.forEach((o) => o.setAttribute('aria-selected', o.dataset.value === current));
+  };
+  el.fpSet = (v) => { current = v; render(); };
+  el.fpClose = () => { list.hidden = true; btn.setAttribute('aria-expanded', 'false'); el.classList.remove('open'); if (openPicker === el) openPicker = null; };
+  const open = () => {
+    if (openPicker && openPicker !== el) openPicker.fpClose();
+    list.hidden = false; btn.setAttribute('aria-expanded', 'true'); el.classList.add('open'); openPicker = el;
+    // open upwards if there's no room below
+    const r = btn.getBoundingClientRect();
+    el.classList.toggle('up', window.innerHeight - r.bottom < Math.min(list.scrollHeight, 320) + 16 && r.top > 340);
+    (opts.find((o) => o.dataset.value === current) || opts[0]).focus();
+  };
+  const choose = (v) => { current = v; render(); el.fpClose(); btn.focus(); onChange(v); };
+  btn.addEventListener('click', () => (list.hidden ? open() : el.fpClose()));
+  btn.addEventListener('keydown', (e) => { if (['ArrowDown', 'ArrowUp'].includes(e.key)) { e.preventDefault(); open(); } });
+  opts.forEach((o, i) => {
+    o.addEventListener('click', () => choose(o.dataset.value));
+    o.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); opts[Math.min(i + 1, opts.length - 1)].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); opts[Math.max(i - 1, 0)].focus(); }
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(o.dataset.value); }
+      else if (e.key === 'Escape' || e.key === 'Tab') { el.fpClose(); btn.focus(); }
+    });
+  });
+  render();
 }

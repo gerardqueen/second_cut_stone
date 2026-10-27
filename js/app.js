@@ -2,6 +2,7 @@ import { SETTINGS } from './config.js';
 import { listOffcuts, listFinishes, submitEnquiry } from './data.js';
 import { quote, compare, fits, money } from './pricing.js';
 import { $, $$, esc, mm, media, swatchSVG, pieceBuilder, mountChrome } from './ui.js';
+import { profileSVG, profileOf } from './profiles.js';
 
 mountChrome();
 $('#hero-stone').innerHTML = swatchSVG({ id: 'hero-stone', name: 'Nero Assoluto', material: 'Granite' }, { w: 1600, h: 760 });
@@ -115,10 +116,10 @@ function renderStock() {
 
 function renderFinishTable() {
   $('#finish-table').innerHTML = `
-    <thead><tr><th>Finish</th><th>Price per metre</th></tr></thead>
+    <thead><tr><th></th><th>Finish</th><th>Price per metre</th></tr></thead>
     <tbody>
-      <tr><td><strong>Unfinished (cut edge)</strong><br><span class="muted">For edges against a wall or unit</span></td><td>Free</td></tr>
-      ${FINISHES.map((f) => `<tr><td><strong>${esc(f.name)}</strong>${f.description ? `<br><span class="muted">${esc(f.description)}</span>` : ''}</td><td>${money(f.price_per_m)}/m</td></tr>`).join('')}
+      <tr><td class="profile-cell">${profileSVG('sawn', { size: 64 })}</td><td><strong>Unfinished (cut edge)</strong><br><span class="muted">For edges against a wall or unit</span></td><td>Free</td></tr>
+      ${FINISHES.map((f) => `<tr><td class="profile-cell">${profileSVG(profileOf(f), { size: 64 })}</td><td><strong>${esc(f.name)}</strong>${f.description ? `<br><span class="muted">${esc(f.description)}</span>` : ''}</td><td>${money(f.price_per_m)}/m</td></tr>`).join('')}
     </tbody>`;
 }
 

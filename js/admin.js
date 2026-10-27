@@ -5,6 +5,7 @@ import {
   listFinishes, saveFinish, deleteFinish, listEnquiries, setEnquiryHandled,
 } from './data.js';
 import { money } from './pricing.js';
+import { PROFILES, PROFILE_KEYS, profileSVG, profileOf } from './profiles.js';
 import { $, $$, esc, mm, media, mountChrome } from './ui.js';
 
 mountChrome({ admin: true });
@@ -212,11 +213,13 @@ function armDelete(sel, fn) {
 // ---------- Edge finishes ----------
 function renderFinishes() {
   $('#f-table').innerHTML = `
-    <thead><tr><th>Order</th><th>Name</th><th>Description</th><th>£ per metre</th><th>Active</th><th></th></tr></thead>
+    <thead><tr><th>Order</th><th>Name</th><th>Profile shown to customers</th><th>Description</th><th>£ per metre</th><th>Active</th><th></th></tr></thead>
     <tbody>${FINISHES.map((f) => `
       <tr data-fid="${esc(f.id)}">
         <td><input type="number" value="${f.sort ?? 0}" data-k="sort" style="width:64px" class="status-select"></td>
         <td><input value="${esc(f.name)}" data-k="name" class="status-select" style="width:100%;min-width:140px"></td>
+        <td><div class="profile-pick"><span data-preview>${profileSVG(profileOf(f), { size: 56 })}</span>
+          <select data-k="profile" class="status-select">${PROFILE_KEYS.filter((k) => k !== 'sawn').map((k) => `<option value="${k}" ${profileOf(f) === k ? 'selected' : ''}>${esc(PROFILES[k].label)}</option>`).join('')}</select></div></td>
         <td><input value="${esc(f.description || '')}" data-k="description" class="status-select" style="width:100%;min-width:200px"></td>
         <td><input type="number" step="0.01" value="${f.price_per_m}" data-k="price_per_m" style="width:96px" class="status-select"></td>
         <td><input type="checkbox" data-k="active" ${f.active ? 'checked' : ''}></td>
@@ -226,18 +229,21 @@ function renderFinishes() {
         </div></td>
       </tr>`).join('')}
     </tbody>`;
+  $$('[data-k=profile]').forEach((sel) => sel.addEventListener('change', () => {
+    sel.closest('tr').querySelector('[data-preview]').innerHTML = profileSVG(sel.value, { size: 56 });
+  }));
   $$('[data-fsave]').forEach((b) => b.addEventListener('click', async () => {
     const tr = b.closest('tr'), get = (k) => $(`[data-k="${k}"]`, tr);
     b.disabled = true; b.textContent = 'Saving…';
     try {
-      await saveFinish({ id: b.dataset.fsave, name: get('name').value.trim(), description: get('description').value.trim(),
+      await saveFinish({ id: b.dataset.fsave, name: get('name').value.trim(), description: get('description').value.trim(), profile: get('profile').value,
         price_per_m: +get('price_per_m').value, sort: +get('sort').value, active: get('active').checked });
       await refreshAll();
     } catch (ex) { alertRow(tr, ex); b.disabled = false; b.textContent = 'Save'; }
   }));
   armDelete('[data-fdel]', async (id) => { await deleteFinish(id); await refreshAll(); });
 }
-function alertRow(tr, ex) { tr.insertAdjacentHTML('afterend', `<tr><td colspan="6" class="error">${esc(ex.message || ex)}</td></tr>`); }
+function alertRow(tr, ex) { tr.insertAdjacentHTML('afterend', `<tr><td colspan="7" class="error">${esc(ex.message || ex)}</td></tr>`); }
 $('#f-add').addEventListener('click', async () => {
   await saveFinish({ name: 'New finish', description: '', price_per_m: 0, sort: FINISHES.length + 1, active: false });
   await refreshAll();

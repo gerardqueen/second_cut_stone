@@ -13,19 +13,19 @@ async function client() {
 const must = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
 
 // ---------------- Demo store ----------------
-const DEMO_KEY = 'scs-demo-v1';
+const DEMO_KEY = 'scs-demo-v2';
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 function seed() {
-  const f = (name, description, price_per_m, sort) => ({ id: uid(), name, description, price_per_m, sort, active: true });
+  const f = (name, description, price_per_m, sort, profile) => ({ id: uid(), name, description, price_per_m, sort, active: true, profile });
   const o = (ref, material, name, length_mm, width_mm, price_per_m2, thickness_mm = 20, notes = '') =>
     ({ id: uid(), ref, material, name, length_mm, width_mm, price_per_m2, thickness_mm, notes, photo_url: '', status: 'available', created_at: new Date().toISOString() });
   return {
     finishes: [
-      f('Pencil round', 'Softly rounded top and bottom arris', 25, 1),
-      f('Square polished', 'Crisp square edge, polished face', 30, 2),
-      f('Bevelled', '45° chamfer along the top edge', 40, 3),
-      f('Bullnose', 'Fully rounded half-circle profile', 55, 4),
-      f('Ogee', 'Decorative S-curve profile', 75, 5),
+      f('Pencil round', 'Softly rounded top and bottom arris', 25, 1, 'pencil'),
+      f('Square polished', 'Crisp square edge, polished face', 30, 2, 'square'),
+      f('Bevelled', '45° chamfer along the top edge', 40, 3, 'bevel'),
+      f('Bullnose', 'Fully rounded half-circle profile', 55, 4, 'bullnose'),
+      f('Ogee', 'Decorative S-curve profile', 75, 5, 'ogee'),
     ],
     offcuts: [
       o('SC-001', 'Granite', 'Nero Assoluto', 1450, 620, 180, 30, 'Polished black, no visible flaws'),
@@ -127,6 +127,7 @@ export async function listFinishes({ includeInactive = false } = {}) {
 
 export async function saveFinish(f) {
   const row = { name: f.name, description: f.description || null, price_per_m: +f.price_per_m, sort: +f.sort || 0, active: !!f.active };
+  if (f.profile) row.profile = f.profile;
   const c = await client();
   if (!c) {
     const s = load();
