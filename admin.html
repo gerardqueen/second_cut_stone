@@ -17,15 +17,30 @@
 
   <main class="admin-main">
     <div class="wrap">
-      <!-- Login -->
+      <!-- Login / sign up -->
       <div id="login-view" hidden>
         <form class="panel login" id="login-form">
-          <h2>Staff login</h2>
+          <h2 id="l-title">Staff login</h2>
           <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" required></div>
-          <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
-          <button class="btn" type="submit" style="width:100%">Sign in</button>
+          <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required minlength="8"></div>
+          <p class="hint" id="l-hint" hidden>At least 8 characters. An admin will need to approve your account before you can manage stock.</p>
+          <button class="btn" type="submit" style="width:100%" id="l-submit">Sign in</button>
           <p class="error" id="l-error" hidden></p>
+          <p class="success" id="l-ok" hidden style="margin-top:12px"></p>
+          <p class="muted" style="margin:16px 0 0;text-align:center"><a href="#" id="l-toggle">New staff member? Create an account</a></p>
         </form>
+      </div>
+
+      <!-- Signed in but not approved yet -->
+      <div id="pending-view" hidden>
+        <div class="panel login" style="text-align:center">
+          <h2>Waiting for approval</h2>
+          <p>You're signed in as <strong id="p-email"></strong>. An existing admin needs to approve your account in the Admins tab. Once they have, reload this page.</p>
+          <div class="inline-actions" style="justify-content:center">
+            <button class="btn" type="button" onclick="location.reload()">Check again</button>
+            <button class="btn ghost" type="button" id="p-signout">Sign out</button>
+          </div>
+        </div>
       </div>
 
       <!-- App -->
@@ -38,6 +53,7 @@
           <button class="active" data-tab="stock">Offcuts</button>
           <button data-tab="edges">Edge finishes</button>
           <button data-tab="enquiries">Enquiries <span id="enq-badge"></span></button>
+          <button data-tab="admins">Admins <span id="adm-badge"></span></button>
         </div>
 
         <!-- Offcuts -->
@@ -110,6 +126,15 @@
             <table class="table" id="f-table"></table>
           </div>
           <button class="btn ghost" style="margin-top:14px" id="f-add">+ Add finish</button>
+        </div>
+
+        <!-- Admins -->
+        <div data-pane="admins" hidden>
+          <h3>Waiting for approval</h3>
+          <p class="muted">Anyone can create an account from the staff login page. They can't see or change anything until you approve them here.</p>
+          <div class="table-wrap" style="margin-bottom:32px"><table class="table" id="r-table"></table></div>
+          <h3>Current admins</h3>
+          <div class="table-wrap"><table class="table" id="a-table"></table></div>
         </div>
 
         <!-- Enquiries -->

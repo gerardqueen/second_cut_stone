@@ -25,6 +25,7 @@ A piece "fits" an offcut if it fits either way round, after adding `cutAllowance
 | `js/data.js` | Supabase calls (falls back to a browser-only demo store) |
 | `js/logo.js` | Second Cut Stone logo (redrawn as SVG) |
 | `supabase/schema.sql` | Tables, security rules, photo bucket, starter edge prices |
+| `supabase/002_access_requests.sql` | Staff self sign-up + admin approval queue |
 
 ## 1. Run it locally (demo mode)
 
@@ -45,10 +46,14 @@ Staff page: http://localhost:8000/admin.html (no login in demo mode).
    ```sql
    insert into public.admins (user_id) values ('PASTE-UID-HERE');
    ```
-5. **Authentication → Sign In / Providers → Email**: turn **off** "Allow new users to sign up".
+5. Run `supabase/002_access_requests.sql` too (staff sign-up with approval).
 6. **Project Settings → API**: copy the Project URL and the `anon` public key into `js/config.js`.
 
 The anon key is meant to be public — the database rules only let admins change stock or read enquiries; the public can view unsold stock and submit enquiries.
+
+## Adding staff
+
+Staff go to `/admin.html` → **Create an account**. They can't see or change anything until an existing admin approves them in **Admins** tab (where admins can also be removed — you can't remove yourself, so there's always one left). Sign-ups stay switched on in Supabase for this to work; an unapproved account has no access.
 
 ## 3. Deploy on GitHub Pages
 
