@@ -281,3 +281,37 @@ section.alt .diagram { background: #f6f6f6; }
 .dim-grid { align-items: end; }
 .edge-grid { align-items: end; }
 .edge-no { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--mist); color: var(--charcoal); font-size: 10px; margin-right: 6px; letter-spacing: 0; vertical-align: 1px; }
+
+/* ---------- Finish picker with edge profiles ---------- */
+.fp { position: relative; }
+.fp-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  padding: 6px 10px; min-height: 46px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: #fff; cursor: pointer; font-size: 14px;
+}
+.fp-btn:focus-visible, .fp.open .fp-btn { outline: 2px solid var(--navy); outline-offset: -1px; border-color: var(--navy); }
+.fp-btn .profile-svg, .fp-list .profile-svg { flex: none; }
+.fp-name { flex: 1; min-width: 0; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-price { color: var(--grey); font-size: 13px; white-space: nowrap; }
+.fp-caret { color: var(--grey); font-size: 11px; }
+.fp-list {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); min-width: 260px;
+  margin: 0; padding: 4px; list-style: none; background: #fff; border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); max-height: 320px; overflow-y: auto;
+}
+.fp.up .fp-list { top: auto; bottom: calc(100% + 4px); }
+.fp-list li {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 2px 10px;
+  padding: 8px 10px; border-radius: var(--radius); cursor: pointer; font-size: 14px;
+}
+.fp-list li small { grid-column: 2 / -1; color: var(--grey); font-size: 12px; line-height: 1.35; }
+.fp-list li .profile-svg { grid-row: span 2; }
+.fp-list li:hover, .fp-list li:focus { background: var(--mist); outline: none; }
+.fp-list li[aria-selected="true"] { background: #e7eaf2; }
+.fp-list li[aria-selected="true"] .fp-name { color: var(--navy); font-weight: 400; }
+.profile-cell { width: 80px; }
+.profile-pick { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 600px) { .edge-grid { grid-template-columns: 1fr; } .fp-list { min-width: 0; } }
+.builder .edge-grid { grid-template-columns: 1fr; }
+.fp-btn .profile-svg { width: 40px; height: auto; }
+.fp-list li .profile-svg { width: 48px; height: auto; }
