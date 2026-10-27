@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Second Cut Stone | Premium Stone Offcuts, Cut to Size | Kirkcaldy, Fife</title>
+  <meta name="description" content="Granite, quartz, marble and Dekton offcuts from the Granite Systems workshop in Kirkcaldy. Enter your sizes, choose your edges and see the price instantly.">
+  <meta property="og:title" content="Second Cut Stone — premium stone offcuts, cut to size">
+  <meta property="og:description" content="Enter your sizes, choose your edges and see the price for every offcut in the yard.">
+  <meta name="theme-color" content="#4d4d4e">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <!-- Granite Systems uses Azo Sans via Adobe Fonts. To use it here, add this site's domain to their
+       Adobe Fonts web project, then uncomment the next line. Jost is the free stand-in until then. -->
+  <!-- <link rel="stylesheet" href="https://use.typekit.net/sde0rfe.css"> -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Jost:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <main>
+    <section class="hero" style="padding:0">
+      <div class="stone" id="hero-stone" aria-hidden="true"></div>
+      <div class="wrap">
+        <div class="eyebrow">Kirkcaldy, Fife · from the Granite Systems workshop</div>
+        <h1>Premium stone offcuts, cut to your size</h1>
+        <p class="lede">Granite, quartz, marble and more for vanities, hearths, sills, shelves and chopping boards. Enter your measurements, choose your edges and see the price for every piece in the yard.</p>
+        <div class="actions">
+          <a class="btn light" href="#finder">Price my piece</a>
+          <a class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.7)" href="#stock">Browse the yard</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="finder" class="alt">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Step 1 · your piece</div>
+          <h2>Find your cut</h2>
+          <p>Tell us the finished size you need. We'll show every offcut it can be cut from, cheapest first, with the price including your chosen edges.</p>
+        </div>
+        <div class="finder">
+          <form class="panel" id="finder-form" autocomplete="off" novalidate>
+            <div class="row2">
+              <div class="field">
+                <label for="f-length">Length</label>
+                <div class="unit" data-unit="mm"><input id="f-length" type="number" inputmode="numeric" min="50" step="1" placeholder="e.g. 1200"></div>
+              </div>
+              <div class="field">
+                <label for="f-width">Depth / width</label>
+                <div class="unit" data-unit="mm"><input id="f-width" type="number" inputmode="numeric" min="50" step="1" placeholder="e.g. 500"></div>
+              </div>
+            </div>
+            <p class="hint">Measure the finished size in millimetres. "Front" is the long edge facing you.</p>
+            <div class="row2">
+              <div class="field">
+                <label for="f-material">Material</label>
+                <select id="f-material"><option value="">Any material</option></select>
+              </div>
+              <div class="field">
+                <label for="f-thick">Thickness</label>
+                <select id="f-thick"><option value="">Any thickness</option></select>
+              </div>
+            </div>
+            <span class="label" style="display:block;margin:6px 0 10px">Finished edges</span>
+            <div id="finder-edges"></div>
+          </form>
+
+          <div>
+            <div class="results-head">
+              <h3 id="results-title">Your options</h3>
+              <span class="muted" id="results-count"></span>
+            </div>
+            <div class="results" id="results">
+              <div class="empty">Enter a length and depth to see which offcuts fit and what each would cost.</div>
+            </div>
+            <p class="note" id="price-note" style="margin-top:14px"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="stock">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Step 2 · or start from the stone</div>
+          <h2>In the yard now</h2>
+          <p>Every offcut is photographed and measured. Pick one you like and price a piece cut from it.</p>
+        </div>
+        <div class="toolbar">
+          <label class="sr-only" for="s-material">Material</label>
+          <select id="s-material"><option value="">All materials</option></select>
+          <label class="sr-only" for="s-sort">Sort</label>
+          <select id="s-sort">
+            <option value="new">Newest first</option>
+            <option value="price">Lowest £/m² first</option>
+            <option value="size">Largest first</option>
+          </select>
+          <span class="muted" id="stock-count"></span>
+        </div>
+        <div class="grid" id="stock-grid"></div>
+      </div>
+    </section>
+
+    <section id="pricing" class="alt">
+      <div class="wrap">
+        <div class="finder" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+          <div>
+            <div class="eyebrow">How pricing works</div>
+            <h2>Simple, upfront pricing</h2>
+            <p>Each offcut has its own price per square metre. You pay for the area of the piece you need, plus each finished edge by the metre. Cut edges that sit against a wall or cabinet don't need finishing.</p>
+            <div class="steps" style="grid-template-columns:1fr;gap:18px;margin-top:26px">
+              <div class="step"><h3>Stone</h3><p>Length × depth (m²) × the offcut's £/m².</p></div>
+              <div class="step"><h3>Edges</h3><p>Length of each finished edge (m) × that finish's £/m.</p></div>
+              <div class="step"><h3>Request</h3><p>Send the quote to us and we'll confirm, cut and finish it for collection.</p></div>
+            </div>
+          </div>
+          <div>
+            <h3>Edge finishes</h3>
+            <div class="table-wrap" style="border:0">
+              <table class="finish-table" id="finish-table"><tbody><tr><td>Loading…</td></tr></tbody></table>
+            </div>
+            <div class="uses">
+              <div class="use">Vanity tops</div><div class="use">Hearths</div><div class="use">Window sills</div>
+              <div class="use">Shelves</div><div class="use">Chopping boards</div><div class="use">Splashbacks</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <!-- Offcut detail / calculator -->
+  <div class="modal" id="detail" role="dialog" aria-modal="true" aria-labelledby="d-title">
+    <div class="scrim" data-close></div>
+    <div class="sheet">
+      <button class="close" data-close aria-label="Close">×</button>
+      <div class="detail">
+        <div class="media" id="d-media"></div>
+        <div class="content">
+          <div class="material" id="d-material" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--grey)"></div>
+          <h2 id="d-title" style="margin-bottom:6px"></h2>
+          <div class="specs" id="d-specs"></div>
+          <p class="note" id="d-notes" style="margin-top:8px"></p>
+
+          <form id="d-form" novalidate style="margin-top:18px">
+            <div class="row2">
+              <div class="field">
+                <label for="d-length">Length</label>
+                <div class="unit" data-unit="mm"><input id="d-length" type="number" inputmode="numeric" min="50"></div>
+              </div>
+              <div class="field">
+                <label for="d-width">Depth / width</label>
+                <div class="unit" data-unit="mm"><input id="d-width" type="number" inputmode="numeric" min="50"></div>
+              </div>
+            </div>
+            <p class="hint" id="d-fit"></p>
+            <div id="d-edges"></div>
+          </form>
+
+          <table class="breakdown" id="d-breakdown"></table>
+          <p class="note" id="d-note"></p>
+
+          <div id="enquiry">
+            <h3 style="margin-top:22px">Request this cut</h3>
+            <form id="e-form" novalidate>
+              <div class="field"><label for="e-name">Name</label><input id="e-name" required autocomplete="name"></div>
+              <div class="row2">
+                <div class="field"><label for="e-email">Email</label><input id="e-email" type="email" required autocomplete="email"></div>
+                <div class="field"><label for="e-phone">Phone</label><input id="e-phone" type="tel" autocomplete="tel"></div>
+              </div>
+              <div class="field"><label for="e-msg">Anything else? (optional)</label><textarea id="e-msg" rows="3" placeholder="What it's for, cut-outs for a sink or tap, when you'd like to collect…"></textarea></div>
+              <button class="btn" type="submit" id="e-submit">Send request</button>
+              <p class="error" id="e-error" hidden></p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal lightbox" id="lightbox" aria-modal="true" role="dialog">
+    <div class="scrim" data-close></div>
+    <div class="sheet"><button class="close" data-close aria-label="Close">×</button><div id="lb-img"></div></div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

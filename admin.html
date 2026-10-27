@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock admin | Second Cut Stone</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#4d4d4e">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Jost:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <main class="admin-main">
+    <div class="wrap">
+      <!-- Login -->
+      <div id="login-view" hidden>
+        <form class="panel login" id="login-form">
+          <h2>Staff login</h2>
+          <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
+          <button class="btn" type="submit" style="width:100%">Sign in</button>
+          <p class="error" id="l-error" hidden></p>
+        </form>
+      </div>
+
+      <!-- App -->
+      <div id="app-view" hidden>
+        <div class="results-head">
+          <h1 style="font-size:28px;margin:0">Stock admin</h1>
+          <span class="muted" id="who"></span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="active" data-tab="stock">Offcuts</button>
+          <button data-tab="edges">Edge finishes</button>
+          <button data-tab="enquiries">Enquiries <span id="enq-badge"></span></button>
+        </div>
+
+        <!-- Offcuts -->
+        <div data-pane="stock">
+          <div class="admin-grid">
+            <form class="panel" id="o-form" novalidate>
+              <h3 id="o-form-title">Log an offcut</h3>
+              <input type="hidden" id="o-id">
+              <input type="hidden" id="o-photo-url">
+              <div class="field">
+                <span class="label">Photo</span>
+                <label class="photo-drop" id="o-photo-drop">
+                  <span id="o-photo-hint">📷 Tap to take a photo<br><span class="muted">or choose from your library</span></span>
+                  <input type="file" id="o-photo" accept="image/*" capture="environment">
+                </label>
+                <div class="inline-actions" style="margin-top:6px">
+                  <button type="button" class="btn small ghost" id="o-photo-library">Choose existing photo</button>
+                  <button type="button" class="btn small ghost" id="o-photo-clear" hidden>Remove photo</button>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="o-ref">Reference</label><input id="o-ref" placeholder="SC-001"></div>
+                <div class="field"><label for="o-status">Status</label>
+                  <select id="o-status"><option value="available">Available</option><option value="reserved">Reserved</option><option value="sold">Sold</option></select>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="o-material">Material</label>
+                  <input id="o-material" list="materials" required placeholder="Granite">
+                  <datalist id="materials"><option>Granite</option><option>Quartz</option><option>Marble</option><option>Dekton</option><option>Silestone</option><option>Corian</option><option>Sensa Granite</option><option>Limestone</option></datalist>
+                </div>
+                <div class="field"><label for="o-name">Colour / name</label><input id="o-name" required placeholder="Nero Assoluto"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="o-length">Length</label><div class="unit" data-unit="mm"><input id="o-length" type="number" inputmode="numeric" required></div></div>
+                <div class="field"><label for="o-width">Width</label><div class="unit" data-unit="mm"><input id="o-width" type="number" inputmode="numeric" required></div></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="o-thick">Thickness</label>
+                  <select id="o-thick"><option>12</option><option selected>20</option><option>30</option></select>
+                </div>
+                <div class="field"><label for="o-price">Price per m²</label><div class="unit" data-unit="£/m²"><input id="o-price" type="number" inputmode="decimal" step="0.01" required style="padding-right:60px"></div></div>
+              </div>
+              <div class="field"><label for="o-notes">Notes for customers (optional)</label><textarea id="o-notes" rows="2" placeholder="e.g. small chip on one corner"></textarea></div>
+              <p class="muted" id="o-area"></p>
+              <div class="inline-actions">
+                <button class="btn" type="submit" id="o-save">Save offcut</button>
+                <button class="btn ghost" type="button" id="o-cancel" hidden>Cancel edit</button>
+              </div>
+              <p class="error" id="o-error" hidden></p>
+            </form>
+
+            <div>
+              <div class="toolbar">
+                <input id="o-search" type="search" placeholder="Search ref, name, material…">
+                <select id="o-filter"><option value="">All statuses</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="sold">Sold</option></select>
+                <span class="muted" id="o-count"></span>
+              </div>
+              <div class="table-wrap">
+                <table class="table" id="o-table"></table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edge finishes -->
+        <div data-pane="edges" hidden>
+          <p>Prices are per linear metre of finished edge. Untick “Active” to hide a finish from customers without deleting it.</p>
+          <div class="table-wrap">
+            <table class="table" id="f-table"></table>
+          </div>
+          <button class="btn ghost" style="margin-top:14px" id="f-add">+ Add finish</button>
+        </div>
+
+        <!-- Enquiries -->
+        <div data-pane="enquiries" hidden>
+          <div class="table-wrap"><table class="table" id="q-table"></table></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
