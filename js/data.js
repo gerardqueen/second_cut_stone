@@ -172,7 +172,38 @@ export async function currentAdmin() {
   const { data: { session } } = await c.auth.getSession();
   if (!session) return null;
   const { data } = await c.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
-  return data ? { email: session.user.email } : { email: session.user.email, notAdmin: true };
+  return data ? { email: session.user.email, id: session.user.id } : { email: session.user.email, notAdmin: true };
+}
+/** Create a staff account. Returns { needsConfirm } when Supabase emails a confirmation link first. */
+export async function signUp(email, password) {
+  const c = await client();
+  const redirect = location.origin + location.pathname; // back to admin.html after confirming
+  const data = must(await c.auth.signUp({ email, password, options: { emailRedirectTo: redirect } }));
+  return { needsConfirm: !data.session };
+}
+
+// ---------------- Admin approvals ----------------
+export async function listAccessRequests() {
+  const c = await client();
+  if (!c) return [];
+  return must(await c.from('access_requests').select('*').order('created_at', { ascending: false }));
+}
+export async function listAdmins() {
+  const c = await client();
+  if (!c) return [{ user_id: 'demo', email: 'demo@local', created_at: new Date().toISOString() }];
+  return must(await c.rpc('list_admins'));
+}
+export async function approveAdmin(userId) {
+  const c = await client(); if (!c) return;
+  must(await c.rpc('approve_admin', { target: userId }));
+}
+export async function removeAdmin(userId) {
+  const c = await client(); if (!c) return;
+  must(await c.rpc('remove_admin', { target: userId }));
+}
+export async function declineRequest(userId) {
+  const c = await client(); if (!c) return;
+  must(await c.from('access_requests').delete().eq('user_id', userId));
 }
 export async function signIn(email, password) {
   const c = await client();

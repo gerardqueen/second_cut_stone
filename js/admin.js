@@ -1,6 +1,7 @@
 import { DEMO_MODE } from './config.js';
 import {
-  currentAdmin, signIn, signOut, listOffcuts, saveOffcut, deleteOffcut, nextRef, uploadPhoto,
+  currentAdmin, signIn, signUp, signOut, listAccessRequests, listAdmins, approveAdmin, removeAdmin, declineRequest,
+  listOffcuts, saveOffcut, deleteOffcut, nextRef, uploadPhoto,
   listFinishes, saveFinish, deleteFinish, listEnquiries, setEnquiryHandled,
 } from './data.js';
 import { money } from './pricing.js';
@@ -8,16 +9,23 @@ import { $, $$, esc, mm, media, mountChrome } from './ui.js';
 
 mountChrome({ admin: true });
 
-let OFFCUTS = [], FINISHES = [], ENQ = [];
+let OFFCUTS = [], FINISHES = [], ENQ = [], REQS = [], ADMINS = [], ME = null;
 let pendingPhoto = null; // File waiting to upload on save
 
 // ---------- Auth ----------
+let signUpMode = false;
 async function boot() {
   let who;
   try { who = await currentAdmin(); } catch (e) { who = null; console.error(e); }
   if (!who) return showLogin();
-  if (who.notAdmin) return showLogin(`${who.email} isn't set up as an admin yet. Add this account's user ID to the admins table (see README).`);
-  $('#login-view').hidden = true;
+  if (who.notAdmin) {
+    $('#login-view').hidden = true; $('#app-view').hidden = true; $('#pending-view').hidden = false;
+    $('#p-email').textContent = who.email;
+    $('#p-signout').onclick = async () => { await signOut(); location.reload(); };
+    return;
+  }
+  ME = who;
+  $('#login-view').hidden = true; $('#pending-view').hidden = true;
   $('#app-view').hidden = false;
   $('#who').textContent = who.demo ? 'Demo mode — changes stay in this browser' : `Signed in as ${who.email}`;
   const so = $('[data-signout]');
@@ -26,14 +34,39 @@ async function boot() {
   resetForm();
 }
 function showLogin(msg) {
-  $('#login-view').hidden = false; $('#app-view').hidden = true;
+  $('#login-view').hidden = false; $('#app-view').hidden = true; $('#pending-view').hidden = true;
   if (msg) { $('#l-error').textContent = msg; $('#l-error').hidden = false; }
 }
+function setMode(up) {
+  signUpMode = up;
+  $('#l-title').textContent = up ? 'Create staff account' : 'Staff login';
+  $('#l-submit').textContent = up ? 'Create account' : 'Sign in';
+  $('#l-toggle').textContent = up ? 'Already have an account? Sign in' : 'New staff member? Create an account';
+  $('#l-pass').autocomplete = up ? 'new-password' : 'current-password';
+  $('#l-hint').hidden = !up; $('#l-error').hidden = true; $('#l-ok').hidden = true;
+}
+$('#l-toggle').addEventListener('click', (e) => { e.preventDefault(); setMode(!signUpMode); });
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const err = $('#l-error'); err.hidden = true;
-  try { await signIn($('#l-email').value.trim(), $('#l-pass').value); await boot(); }
-  catch (ex) { err.textContent = ex.message || 'Sign-in failed'; err.hidden = false; }
+  const err = $('#l-error'), ok = $('#l-ok'); err.hidden = true; ok.hidden = true;
+  const email = $('#l-email').value.trim(), pass = $('#l-pass').value;
+  const btn = $('#l-submit'); btn.disabled = true;
+  try {
+    if (signUpMode) {
+      if (pass.length < 8) throw new Error('Password must be at least 8 characters.');
+      const { needsConfirm } = await signUp(email, pass);
+      if (needsConfirm) {
+        ok.innerHTML = `Account created. Check <strong>${esc(email)}</strong> for a confirmation link, then an admin will approve you.`;
+        ok.hidden = false;
+      } else await boot();
+    } else {
+      await signIn(email, pass); await boot();
+    }
+  } catch (ex) {
+    const m = ex.message || 'Something went wrong';
+    err.textContent = /confirm/i.test(m) ? 'Please click the confirmation link in your email first.' : m;
+    err.hidden = false;
+  } finally { btn.disabled = false; }
 });
 
 // ---------- Tabs ----------
@@ -43,10 +76,11 @@ $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
 }));
 
 async function refreshAll() {
-  [OFFCUTS, FINISHES, ENQ] = await Promise.all([
+  [OFFCUTS, FINISHES, ENQ, REQS, ADMINS] = await Promise.all([
     listOffcuts({ includeSold: true }), listFinishes({ includeInactive: true }), listEnquiries(),
+    listAccessRequests().catch(() => []), listAdmins().catch(() => []),
   ]);
-  renderOffcuts(); renderFinishes(); renderEnquiries();
+  renderOffcuts(); renderFinishes(); renderEnquiries(); renderAdmins();
 }
 
 // ---------- Offcut form ----------
@@ -229,6 +263,38 @@ function renderEnquiries() {
       </tr>`;
     }).join('') || `<tr><td colspan="7" class="muted">No enquiries yet.</td></tr>`}</tbody>`;
   $$('[data-handled]').forEach((c) => c.addEventListener('change', async () => { await setEnquiryHandled(c.dataset.handled, c.checked); await refreshAll(); }));
+}
+
+// ---------- Admins ----------
+const when = (d) => new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+function renderAdmins() {
+  $('#adm-badge').innerHTML = REQS.length ? `<span class="tag">${REQS.length}</span>` : '';
+  $('#r-table').innerHTML = `
+    <thead><tr><th>Email</th><th>Signed up</th><th></th></tr></thead>
+    <tbody>${REQS.map((r) => `
+      <tr><td>${esc(r.email)}</td><td>${when(r.created_at)}</td>
+        <td><div class="inline-actions">
+          <button class="btn small" data-approve="${esc(r.user_id)}">Approve</button>
+          <button class="btn small ghost" data-decline="${esc(r.user_id)}">Decline</button>
+        </div></td></tr>`).join('') || `<tr><td colspan="3" class="muted">No one waiting.</td></tr>`}</tbody>`;
+  $('#a-table').innerHTML = `
+    <thead><tr><th>Email</th><th>Admin since</th><th></th></tr></thead>
+    <tbody>${ADMINS.map((a) => `
+      <tr><td>${esc(a.email)}${ME && a.user_id === ME.id ? ' <span class="tag grey">You</span>' : ''}</td><td>${when(a.created_at)}</td>
+        <td>${ME && a.user_id === ME.id ? '' : `<button class="btn small ghost" data-remove="${esc(a.user_id)}">Remove</button>`}</td></tr>`).join('')}</tbody>`;
+  const act = (sel, key, fn) => $$(sel).forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await fn(b.dataset[key]); await refreshAll(); }
+    catch (ex) { b.disabled = false; b.closest('tr').insertAdjacentHTML('afterend', `<tr><td colspan="3" class="error">${esc(ex.message)}</td></tr>`); }
+  }));
+  act('[data-approve]', 'approve', approveAdmin);
+  act('[data-decline]', 'decline', declineRequest);
+  // two-tap confirm for removing someone
+  $$('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to remove'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Remove'; } }, 3500); return; }
+    b.disabled = true;
+    try { await removeAdmin(b.dataset.remove); await refreshAll(); } catch (ex) { b.disabled = false; b.textContent = ex.message; }
+  }));
 }
 
 if (DEMO_MODE) console.info('Second Cut Stone admin running in demo mode.');
