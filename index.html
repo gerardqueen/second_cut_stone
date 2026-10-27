@@ -39,22 +39,12 @@
         <div class="section-head">
           <div class="eyebrow">Step 1 · your piece</div>
           <h2>Find your cut</h2>
-          <p>Tell us the finished size you need. We'll show every offcut it can be cut from, cheapest first, with the price including your chosen edges.</p>
+          <p>Pick a shape, enter its measurements and choose your edges. We'll show every offcut it can be cut from, cheapest first, with the full price.</p>
         </div>
         <div class="finder">
           <form class="panel" id="finder-form" autocomplete="off" novalidate>
-            <div class="row2">
-              <div class="field">
-                <label for="f-length">Length</label>
-                <div class="unit" data-unit="mm"><input id="f-length" type="number" inputmode="numeric" min="50" step="1" placeholder="e.g. 1200"></div>
-              </div>
-              <div class="field">
-                <label for="f-width">Depth / width</label>
-                <div class="unit" data-unit="mm"><input id="f-width" type="number" inputmode="numeric" min="50" step="1" placeholder="e.g. 500"></div>
-              </div>
-            </div>
-            <p class="hint">Measure the finished size in millimetres. "Front" is the long edge facing you.</p>
-            <div class="row2">
+            <div id="finder-builder"></div>
+            <div class="row2" style="margin-top:18px">
               <div class="field">
                 <label for="f-material">Material</label>
                 <select id="f-material"><option value="">Any material</option></select>
@@ -64,8 +54,6 @@
                 <select id="f-thick"><option value="">Any thickness</option></select>
               </div>
             </div>
-            <span class="label" style="display:block;margin:6px 0 10px">Finished edges</span>
-            <div id="finder-edges"></div>
           </form>
 
           <div>
@@ -112,7 +100,7 @@
             <h2>Simple, upfront pricing</h2>
             <p>Each offcut has its own price per square metre. You pay for the area of the piece you need, plus each finished edge by the metre. Cut edges that sit against a wall or cabinet don't need finishing.</p>
             <div class="steps" style="grid-template-columns:1fr;gap:18px;margin-top:26px">
-              <div class="step"><h3>Stone</h3><p>Length × depth (m²) × the offcut's £/m².</p></div>
+              <div class="step"><h3>Stone</h3><p id="stone-rule">Area (m²) × the offcut's £/m². Round and L-shaped pieces are priced on the rectangle they're cut from.</p></div>
               <div class="step"><h3>Edges</h3><p>Length of each finished edge (m) × that finish's £/m.</p></div>
               <div class="step"><h3>Request</h3><p>Send the quote to us and we'll confirm, cut and finish it for collection.</p></div>
             </div>
@@ -148,18 +136,8 @@
           <p class="note" id="d-notes" style="margin-top:8px"></p>
 
           <form id="d-form" novalidate style="margin-top:18px">
-            <div class="row2">
-              <div class="field">
-                <label for="d-length">Length</label>
-                <div class="unit" data-unit="mm"><input id="d-length" type="number" inputmode="numeric" min="50"></div>
-              </div>
-              <div class="field">
-                <label for="d-width">Depth / width</label>
-                <div class="unit" data-unit="mm"><input id="d-width" type="number" inputmode="numeric" min="50"></div>
-              </div>
-            </div>
-            <p class="hint" id="d-fit"></p>
-            <div id="d-edges"></div>
+            <div id="d-builder"></div>
+            <p class="hint" id="d-fit" style="margin-top:12px"></p>
           </form>
 
           <table class="breakdown" id="d-breakdown"></table>

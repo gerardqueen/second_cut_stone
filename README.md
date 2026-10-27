@@ -12,7 +12,9 @@ edges  = Σ (finished edge length in m × finish £/m)   // front/back use lengt
 total  = stone + edges   (minimum charge applied if set)
 ```
 
-A piece "fits" an offcut if it fits either way round, after adding `cutAllowanceMm` (default 5mm) to each dimension. Change that, the price note and the minimum charge in `js/config.js`.
+Customers first choose a **shape** (rectangle, square, circle, oval, half-moon, L-shape). The shape decides which measurements are asked for (circles and half-moons take a diameter or a radius), which edges can be finished, and the area. Shaped pieces are charged on the rectangle they're cut from (`shapedPieceCharge: 'block'`) — set it to `'shape'` to charge only the finished area. `curvedEdgeFactor` adds a premium to polishing curved edges. Shapes live in `js/shapes.js`.
+
+A piece "fits" an offcut if its bounding rectangle fits either way round, after adding `cutAllowanceMm` (default 5mm) to each dimension. Change that, the price note and the minimum charge in `js/config.js`.
 
 ## Files
 
@@ -26,6 +28,8 @@ A piece "fits" an offcut if it fits either way round, after adding `cutAllowance
 | `js/logo.js` | Second Cut Stone logo (redrawn as SVG) |
 | `supabase/schema.sql` | Tables, security rules, photo bucket, starter edge prices |
 | `supabase/002_access_requests.sql` | Staff self sign-up + admin approval queue |
+| `supabase/003_shapes.sql` | Stores the shape and measurements on enquiries |
+| `js/shapes.js` | Shapes: measurements, area, edges, outline |
 
 ## 1. Run it locally (demo mode)
 
