@@ -30,6 +30,8 @@ A piece "fits" an offcut if its bounding rectangle fits either way round, after 
 | `supabase/002_access_requests.sql` | Staff self sign-up + admin approval queue |
 | `supabase/003_shapes.sql` | Stores the shape and measurements on enquiries |
 | `js/shapes.js` | Shapes: measurements, area, edges, outline |
+| `js/profiles.js` | Edge profile outlines shown in the finish picker |
+| `supabase/004_edge_profiles.sql` | Lets each finish choose its profile picture |
 
 ## 1. Run it locally (demo mode)
 
