@@ -256,7 +256,7 @@ function renderEnquiries() {
         <td>${esc(e.customer_name)}<br><a href="mailto:${esc(e.email)}">${esc(e.email)}</a>${e.phone ? `<br><a href="tel:${esc(e.phone)}">${esc(e.phone)}</a>` : ''}
           ${e.message ? `<br><span class="muted">“${esc(e.message)}”</span>` : ''}</td>
         <td>${esc(e.offcut_ref || '—')}</td>
-        <td style="white-space:nowrap">${mm(e.length_mm)} × ${mm(e.width_mm)}</td>
+        <td>${e.dims?.summary ? esc(e.dims.summary) : `${mm(e.length_mm)} × ${mm(e.width_mm)}`}<br><span class="muted">needs ${mm(e.length_mm)} × ${mm(e.width_mm)} of stone</span></td>
         <td>${edges}</td>
         <td>${money(e.quoted_total)}</td>
         <td><input type="checkbox" data-handled="${esc(e.id)}" ${e.handled ? 'checked' : ''}></td>

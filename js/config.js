@@ -14,6 +14,11 @@ export const SETTINGS = {
   priceNote: 'Prices include VAT. Collection from our Kirkcaldy yard.',
   // Minimum charge for any single piece (0 = off).
   minimumCharge: 0,
+  // Circles, ovals, half-moons and L-shapes: 'block' charges the stone on the rectangle the
+  // piece is cut from (the waste can't be resold); 'shape' charges only the finished area.
+  shapedPieceCharge: 'block',
+  // Multiplier on edge finishing for curved edges, which take longer to polish (1 = same price).
+  curvedEdgeFactor: 1,
   // Extra mm added to each side when checking whether a piece fits an offcut
   // (allow for saw blade and squaring up). 0 = exact fit allowed.
   cutAllowanceMm: 5,

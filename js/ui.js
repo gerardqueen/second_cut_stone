@@ -1,7 +1,8 @@
 // Shared UI bits: header/footer, stone swatches, edge picker + diagram.
 import { SETTINGS, DEMO_MODE } from './config.js';
 import { logoSVG } from './logo.js';
-import { SIDES, money } from './pricing.js';
+import { money } from './pricing.js';
+import { SHAPES, SHAPE_KEYS, SHAPE_ICONS, geometry } from './shapes.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -94,86 +95,219 @@ export function swatchSVG(o, { w = 400, h = 300 } = {}) {
 export const media = (o, size) =>
   o.photo_url ? `<img src="${esc(o.photo_url)}" alt="${esc(o.name)}" loading="lazy">` : swatchSVG(o, size);
 
-// ---------- Edge picker ----------
+// ---------- Piece builder (shape → measurements → edges) ----------
 /**
- * Renders four edge selects + a live diagram into `root`.
- * Returns { get(), set(values), redraw(length, width) }.
+ * Renders the shape picker, the measurements that shape needs, a live drawing,
+ * and an edge-finish choice for each edge of the shape.
+ * Returns { get(), set(state) } where state = { shape, dims, modes, hand, edges }
+ * and get() also returns `piece` (the geometry from shapes.js).
  */
-export function edgePicker(root, finishes, { onChange } = {}) {
-  const state = { front: '', back: '', left: '', right: '' };
-  let L = 1000, W = 600;
+export function pieceBuilder(root, finishes, { onChange, idPrefix = root.id } = {}) {
+  const state = { shape: 'rectangle', dims: {}, modes: {}, hand: 'left', edges: {} };
   const opt = finishes.map((f) => `<option value="${esc(f.id)}">${esc(f.name)} · ${money(f.price_per_m).replace('.00', '')}/m</option>`).join('');
-  root.innerHTML = `
-    <div class="edges">
-      <div class="diagram" aria-hidden="true"></div>
-      <div class="edge-grid">
-        ${SIDES.map((s) => `
-          <div class="field">
-            <label for="${root.id}-${s.key}">${esc(s.label)}</label>
-            <select id="${root.id}-${s.key}" data-side="${s.key}"><option value="">Unfinished</option>${opt}</select>
-          </div>`).join('')}
-      </div>
-      <div>
-        <span class="label">Quick set</span>
-        <div class="quick">
-          <button type="button" class="chip" data-quick="none">No finished edges</button>
-          <button type="button" class="chip" data-quick="front">Front only</button>
-          <button type="button" class="chip" data-quick="three">Front + both ends</button>
-          <button type="button" class="chip" data-quick="all">All four</button>
-        </div>
-      </div>
-    </div>`;
-  const diag = $('.diagram', root);
-  const sels = $$('select', root);
 
-  function draw() {
-    const maxW = 340, maxH = 170;
-    const ratio = L > 0 && W > 0 ? W / L : .5;
-    let w = maxW, h = maxW * ratio;
-    if (h > maxH) { h = maxH; w = maxH / ratio; }
-    w = Math.max(w, 60); h = Math.max(h, 24);
-    const x = (400 - w) / 2, y = 30;
-    const name = (k) => finishes.find((f) => f.id === state[k])?.name;
-    const edge = (k, x1, y1, x2, y2) => {
-      const on = !!state[k];
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${on ? '#1e2843' : '#a7a7a7'}" stroke-width="${on ? 6 : 2}" stroke-dasharray="${on ? '' : '5 5'}" stroke-linecap="round"/>`;
-    };
-    const lbl = (k, tx, ty, anchor = 'middle', rot = 0) => {
-      const n = name(k);
-      return `<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="12" fill="${n ? '#1e2843' : '#888'}" font-family="Jost, sans-serif" ${rot ? `transform="rotate(${rot} ${tx} ${ty})"` : ''}>${esc(n || 'cut')}</text>`;
-    };
-    diag.innerHTML = `<svg viewBox="0 0 400 ${y + h + 46}">
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c9c8c4"/>
-      ${edge('back', x, y, x + w, y)}${edge('front', x, y + h, x + w, y + h)}
-      ${edge('left', x, y, x, y + h)}${edge('right', x + w, y, x + w, y + h)}
-      <text x="200" y="${y + h / 2 + 5}" text-anchor="middle" font-size="14" fill="#4d4d4e" font-family="Jost, sans-serif">${L ? mm(L) : '—'} × ${W ? mm(W) : '—'}</text>
-      ${lbl('back', 200, y - 10)}
-      ${lbl('front', 200, y + h + 20)}
-      <text x="200" y="${y + h + 38}" text-anchor="middle" font-size="10" fill="#888" letter-spacing="2" font-family="Jost, sans-serif">FRONT</text>
-      ${lbl('left', x - 10, y + h / 2, 'middle', -90)}
-      ${lbl('right', x + w + 14, y + h / 2, 'middle', 90)}
-    </svg>`;
+  root.innerHTML = `
+    <div class="builder">
+      <span class="label">1 · Shape</span>
+      <div class="shapes" role="radiogroup" aria-label="Shape">
+        ${SHAPE_KEYS.map((k) => `
+          <button type="button" class="shape-tile" role="radio" data-shape="${k}" title="${esc(SHAPES[k].hint)}">
+            <svg viewBox="0 0 48 36" aria-hidden="true">${SHAPE_ICONS[k]}</svg>
+            <span>${esc(SHAPES[k].label)}</span>
+          </button>`).join('')}
+      </div>
+      <p class="hint shape-hint"></p>
+      <span class="label">2 · Measurements</span>
+      <div class="dims"></div>
+      <p class="error dims-error" hidden></p>
+      <div class="diagram" aria-hidden="true"></div>
+      <span class="label">3 · Finished edges</span>
+      <div class="edge-grid"></div>
+      <div class="quick"></div>
+    </div>`;
+
+  const dimsEl = $('.dims', root), diag = $('.diagram', root), edgeGrid = $('.edge-grid', root), quickEl = $('.quick', root);
+  let piece = geometry(state.shape, state.dims, state.hand);
+  const emit = () => onChange?.(api.get());
+
+  // ----- measurements -----
+  function renderDims() {
+    const def = SHAPES[state.shape];
+    $('.shape-hint', root).textContent = def.hint;
+    $$('.shape-tile', root).forEach((t) => { const on = t.dataset.shape === state.shape; t.classList.toggle('active', on); t.setAttribute('aria-checked', on); });
+    dimsEl.innerHTML = `
+      ${def.hand ? `
+        <div class="field">
+          <span class="label">Return on the</span>
+          <div class="seg" role="radiogroup">
+            ${['left', 'right'].map((h) => `<button type="button" data-hand="${h}" class="${state.hand === h ? 'active' : ''}">${h === 'left' ? 'Left' : 'Right'}</button>`).join('')}
+          </div>
+        </div>` : ''}
+      <div class="dim-grid ${def.fields.length === 1 ? 'one' : ''}">
+        ${def.fields.map((f) => {
+          const mode = f.alt && state.modes[f.key] === 'alt' ? f.alt : null;
+          const val = state.dims[f.key] ? Math.round(state.dims[f.key] * (mode ? mode.factor : 1)) : '';
+          return `
+          <div class="field">
+            <label for="${idPrefix}-${f.key}">${esc(mode ? mode.label : f.label)}</label>
+            ${f.alt ? `<div class="seg small">
+                <button type="button" data-mode="${f.key}:main" class="${mode ? '' : 'active'}">${esc(f.label.split(' (')[0])}</button>
+                <button type="button" data-mode="${f.key}:alt" class="${mode ? 'active' : ''}">${esc(f.alt.label)}</button>
+              </div>` : ''}
+            <div class="unit" data-unit="mm"><input id="${idPrefix}-${f.key}" data-dim="${f.key}" type="number" inputmode="numeric" min="1" step="1" placeholder="${esc(mode ? 'e.g. ' + Math.round(parseInt(f.ph.replace(/\D/g, ''), 10) * mode.factor) : f.ph)}" value="${val}"></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    $$('[data-dim]', dimsEl).forEach((inp) => inp.addEventListener('input', () => {
+      const f = SHAPES[state.shape].fields.find((x) => x.key === inp.dataset.dim);
+      const n = parseFloat(inp.value);
+      const alt = f.alt && state.modes[f.key] === 'alt';
+      state.dims[f.key] = n > 0 ? (alt ? n / f.alt.factor : n) : 0;
+      update(false);
+    }));
+    $$('[data-mode]', dimsEl).forEach((b) => b.addEventListener('click', () => {
+      const [k, m] = b.dataset.mode.split(':');
+      state.modes[k] = m === 'alt' ? 'alt' : '';
+      renderDims(); update(false);
+      $(`[data-dim="${k}"]`, dimsEl)?.focus();
+    }));
+    $$('[data-hand]', dimsEl).forEach((b) => b.addEventListener('click', () => { state.hand = b.dataset.hand; renderDims(); update(true); }));
   }
 
-  sels.forEach((s) => s.addEventListener('change', () => { state[s.dataset.side] = s.value; draw(); onChange?.({ ...state }); }));
-  $$('[data-quick]', root).forEach((b) => b.addEventListener('click', () => {
-    const def = finishes[0]?.id || '';
-    const pick = (k) => state[k] || def;
-    const q = b.dataset.quick;
-    const next = {
-      none: { front: '', back: '', left: '', right: '' },
-      front: { front: pick('front'), back: '', left: '', right: '' },
-      three: { front: pick('front'), back: '', left: pick('front'), right: pick('front') },
-      all: { front: pick('front'), back: pick('front'), left: pick('front'), right: pick('front') },
-    }[q];
-    api.set(next); onChange?.({ ...state });
+  // ----- edges -----
+  function renderEdges() {
+    const edges = piece.valid ? piece.edges : geometry(state.shape, sampleDims(state.shape), state.hand).edges;
+    // keep choices for edges that still exist on this shape
+    state.edges = Object.fromEntries(edges.map((e) => [e.key, state.edges[e.key] || '']));
+    edgeGrid.classList.toggle('one', edges.length === 1);
+    const numbered = edges.length > 4;
+    edgeGrid.innerHTML = edges.map((e, i) => `
+      <div class="field">
+        <label for="${idPrefix}-edge-${e.key}">${numbered ? `<span class="edge-no">${i + 1}</span>` : ''}${esc(e.label)}${e.curved && edges.length > 1 ? ' <span class="muted">· curved</span>' : ''}</label>
+        <select id="${idPrefix}-edge-${e.key}" data-edge="${e.key}"><option value="">Unfinished</option>${opt}</select>
+      </div>`).join('');
+    $$('[data-edge]', edgeGrid).forEach((s) => {
+      s.value = state.edges[s.dataset.edge] || '';
+      s.addEventListener('change', () => { state.edges[s.dataset.edge] = s.value; draw(); emit(); });
+    });
+    const keys = edges.map((e) => e.key);
+    const chips = [['none', 'No finished edges'], ['all', edges.length === 1 ? 'Finish the edge' : 'All edges']];
+    if (keys.includes('front') && edges.length > 2) chips.splice(1, 0, ['front', 'Front only']);
+    if (state.shape === 'rectangle' || state.shape === 'square') chips.splice(2, 0, ['three', 'Front + both ends']);
+    if (state.shape === 'lshape') chips.splice(2, 0, ['exposed', 'Front edges + ends']);
+    quickEl.innerHTML = `<span class="label">Quick set</span><div class="quick-row">${chips.map(([k, t]) => `<button type="button" class="chip" data-quick="${k}">${t}</button>`).join('')}</div>`;
+    $$('[data-quick]', quickEl).forEach((b) => b.addEventListener('click', () => {
+      const def = Object.values(state.edges).find(Boolean) || finishes[0]?.id || '';
+      const want = {
+        none: [], all: keys, front: ['front'], three: ['front', 'left', 'right'],
+        exposed: ['front', 'returnFront', 'runEnd', 'returnEnd'],
+      }[b.dataset.quick];
+      for (const k of keys) state.edges[k] = want.includes(k) ? (state.edges[k] || def) : '';
+      $$('[data-edge]', edgeGrid).forEach((s) => (s.value = state.edges[s.dataset.edge] || ''));
+      draw(); emit();
+    }));
+  }
+
+  // ----- drawing -----
+  function draw() {
+    const g = piece.valid ? piece : geometry(state.shape, sampleDims(state.shape), state.hand);
+    // Shapes with many edges get numbered markers (matching the numbered dropdowns) instead of
+    // text labels, which would collide at inner corners.
+    const numbered = g.edges.length > 4;
+    const W = 400, H = 220, padX = numbered ? 30 : 92, padY = 30;
+    const s = Math.min((W - padX * 2) / g.bboxL, (H - padY * 2) / g.bboxW);
+    const ox = (W - g.bboxL * s) / 2, oy = (H - g.bboxW * s) / 2;
+    const name = (k) => finishes.find((f) => f.id === state.edges[k])?.name;
+    const sw = 1 / s; // 1px in mm units
+    const ink = '#1e2843', quiet = '#8a8a8a', font = 'font-family="Jost, sans-serif"';
+    const edgeMarks = g.edges.map((e) => {
+      const on = !!state.edges[e.key];
+      return `<path d="${e.d}" fill="none" stroke="${on ? ink : '#a7a7a7'}" stroke-width="${(on ? 6 : 2) * sw}" ${on ? '' : `stroke-dasharray="${5 * sw} ${5 * sw}"`} stroke-linecap="round"/>`;
+    }).join('');
+    let labels;
+    if (g.edges.length === 1) {
+      const n = name('edge');
+      labels = `<text x="${W / 2}" y="${H - 4}" text-anchor="middle" font-size="11" fill="${n ? ink : quiet}" ${font}>${esc(n ? 'Edge: ' + n : 'Edge: cut')}</text>`;
+    } else if (numbered) {
+      labels = g.edges.map((e, i) => {
+        const x = ox + e.mx * s + e.nx * 13, y = oy + e.my * s + e.ny * 13;
+        const on = !!state.edges[e.key];
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" fill="${on ? ink : '#fff'}" stroke="${on ? ink : '#b5b5b5'}"/>
+          <text x="${x.toFixed(1)}" y="${(y + 3.5).toFixed(1)}" text-anchor="middle" font-size="10" fill="${on ? '#fff' : '#666'}" ${font}>${i + 1}</text>`;
+      }).join('');
+    } else {
+      labels = g.edges.map((e) => {
+        const side = Math.abs(e.nx) > 0.5;
+        const x = ox + e.mx * s + e.nx * 10, y = oy + e.my * s + e.ny * 14 + (side ? 4 : 4);
+        const anchor = side ? (e.nx > 0 ? 'start' : 'end') : 'middle';
+        const n = name(e.key);
+        return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="11" fill="${n ? ink : quiet}" ${font}>${esc(n || 'cut')}</text>`;
+      }).join('');
+    }
+    diag.innerHTML = `<svg viewBox="0 0 ${W} ${H + 16}">
+      <g transform="translate(${ox} ${oy}) scale(${s})">
+        <path d="${g.outline}" fill="#c9c8c4" ${piece.valid ? '' : 'opacity=".45"'}/>
+        ${edgeMarks}
+      </g>
+      ${labels}
+      <text x="${W / 2}" y="${(state.shape === 'semicircle' ? oy + g.bboxW * s * 0.42 : state.shape === 'lshape' ? oy + Math.min(g.bboxW, Number(state.dims.depth) || g.bboxW) * s / 2 : oy + (g.bboxW * s) / 2) + 5}" text-anchor="middle" font-size="13" fill="#4d4d4e" ${font}>${piece.valid ? esc(dimLabel()) : 'Enter measurements'}</text>
+      <text x="${W / 2}" y="${H + 12}" text-anchor="middle" font-size="9" fill="#9a9a9a" letter-spacing="2" ${font}>FRONT</text>
+    </svg>`;
+  }
+  function dimLabel() {
+    const d = state.dims, r = Math.round;
+    return {
+      rectangle: `${mm(r(d.length))} × ${mm(r(d.width))}`, square: `${mm(r(d.side))} square`,
+      circle: `⌀ ${mm(r(d.diameter))}`, oval: `${mm(r(d.length))} × ${mm(r(d.width))}`,
+      semicircle: `${mm(r(d.diameter))} wide`, lshape: `${mm(r(d.length))} × ${mm(r(d.returnLength))}`,
+    }[state.shape];
+  }
+
+  function update(rebuildEdges) {
+    const before = piece.edges.map((e) => e.key).join();
+    piece = geometry(state.shape, state.dims, state.hand);
+    const err = $('.dims-error', root);
+    err.hidden = !piece.error; err.textContent = piece.error || '';
+    if (rebuildEdges || piece.edges.map((e) => e.key).join() !== before) renderEdges();
+    draw(); emit();
+  }
+
+  $$('.shape-tile', root).forEach((t) => t.addEventListener('click', () => {
+    if (state.shape === t.dataset.shape) return;
+    const prev = state.dims;
+    state.shape = t.dataset.shape;
+    // carry sensible measurements across shapes
+    const L = prev.length || prev.side || prev.diameter, W = prev.width || prev.depth || prev.side;
+    state.dims = {
+      rectangle: { length: L, width: W }, square: { side: L }, circle: { diameter: L },
+      oval: { length: L, width: W }, semicircle: { diameter: L },
+      lshape: { length: L, depth: W, returnLength: prev.returnLength, returnDepth: prev.returnDepth || W },
+    }[state.shape];
+    renderDims(); update(true);
   }));
 
   const api = {
-    get: () => ({ ...state }),
-    set(v) { Object.assign(state, v); sels.forEach((s) => (s.value = state[s.dataset.side] || '')); draw(); },
-    redraw(l, w) { L = l; W = w; draw(); },
+    get: () => ({ shape: state.shape, dims: { ...state.dims }, modes: { ...state.modes }, hand: state.hand, edges: { ...state.edges }, piece }),
+    set(v) {
+      Object.assign(state, { shape: v.shape || 'rectangle', dims: { ...(v.dims || {}) }, modes: { ...(v.modes || {}) }, hand: v.hand || 'left', edges: { ...(v.edges || {}) } });
+      piece = geometry(state.shape, state.dims, state.hand);
+      renderDims(); renderEdges(); draw();
+    },
+    /** Plain-English description of the piece and its edges, for enquiries. */
+    describe() {
+      const fin = (k) => finishes.find((f) => f.id === state.edges[k])?.name;
+      const done = piece.edges.filter((e) => fin(e.key)).map((e) => `${e.label}: ${fin(e.key)}`);
+      return { summary: piece.summary, edges: done.length ? done.join('; ') : 'No finished edges' };
+    },
   };
-  draw();
+  renderDims(); renderEdges(); draw();
   return api;
+}
+
+function sampleDims(shape) {
+  return {
+    rectangle: { length: 1000, width: 500 }, square: { side: 600 }, circle: { diameter: 600 },
+    oval: { length: 1000, width: 600 }, semicircle: { diameter: 900 },
+    lshape: { length: 2000, depth: 600, returnLength: 1400, returnDepth: 600 },
+  }[shape];
 }

@@ -1,52 +1,56 @@
 // Pure pricing maths — no DOM, no network. Easy to test.
 import { SETTINGS } from './config.js';
 
-export const SIDES = [
-  { key: 'front', label: 'Front (long edge)', axis: 'length' },
-  { key: 'back',  label: 'Back (long edge)',  axis: 'length' },
-  { key: 'left',  label: 'Left (short edge)', axis: 'width'  },
-  { key: 'right', label: 'Right (short edge)', axis: 'width' },
-];
-
 const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: SETTINGS.currency });
 export const money = (n) => gbp.format(Number(n) || 0);
 
-/** Normalise so length is always the longer side. */
-export function normalise(l, w) {
-  l = Math.round(Number(l) || 0); w = Math.round(Number(w) || 0);
-  return l >= w ? { length: l, width: w } : { length: w, width: l };
-}
-
-/** Does a piece (l × w) fit on an offcut, allowing rotation and the cut allowance? */
-export function fits(offcut, l, w) {
+/**
+ * Does a piece fit on an offcut? Uses the piece's bounding box (the rectangle it is
+ * cut from), allowing rotation and the cut allowance.
+ * @param offcut { length_mm, width_mm }
+ * @param piece  geometry from shapes.js ({ bboxL, bboxW })
+ */
+export function fits(offcut, piece) {
+  if (!piece?.valid) return false;
   const a = SETTINGS.cutAllowanceMm || 0;
-  const pl = l + a, pw = w + a;
+  const pl = piece.bboxL + a, pw = piece.bboxW + a;
   const ol = offcut.length_mm, ow = offcut.width_mm;
   return (pl <= ol && pw <= ow) || (pl <= ow && pw <= ol);
 }
 
+/** Is this piece a plain rectangle (where the shape area and the area it's cut from are the same)? */
+const isRectangular = (piece) => Math.abs(piece.areaMm2 - piece.bboxL * piece.bboxW) < 1;
+
 /**
  * Price a piece.
  * @param offcut   { price_per_m2 }
- * @param l, w     piece size in mm (l = the side called "length" by the customer)
- * @param edges    { front: finishId|null, back, left, right }
- * @param finishes array of { id, name, price_per_m }
+ * @param piece    geometry from shapes.js
+ * @param edges    { [edgeKey]: finishId | '' }
+ * @param finishes [{ id, name, price_per_m }]
  */
-export function quote(offcut, l, w, edges = {}, finishes = []) {
-  const L = Number(l) || 0, W = Number(w) || 0;
-  const areaM2 = (L * W) / 1e6;
-  const stone = areaM2 * Number(offcut.price_per_m2 || 0);
+export function quote(offcut, piece, edges = {}, finishes = []) {
+  const rate = Number(offcut.price_per_m2 || 0);
+  const shapeM2 = piece.areaMm2 / 1e6;
+  const blockM2 = (piece.bboxL * piece.bboxW) / 1e6;
+  // Shaped pieces (circles, ovals, L-shapes…) leave waste that can't be resold, so by default
+  // they're charged on the rectangle they're cut from. Set shapedPieceCharge to 'shape' to
+  // charge only the finished area instead.
+  const chargeBlock = !isRectangular(piece) && SETTINGS.shapedPieceCharge !== 'shape';
+  const chargedM2 = chargeBlock ? blockM2 : shapeM2;
+  const stone = chargedM2 * rate;
 
   const byId = Object.fromEntries(finishes.map((f) => [f.id, f]));
+  const factor = Number(SETTINGS.curvedEdgeFactor) || 1;
   const edgeLines = [];
   let edgeTotal = 0;
-  for (const side of SIDES) {
-    const f = byId[edges[side.key]];
+  for (const e of piece.edges) {
+    const f = byId[edges[e.key]];
     if (!f) continue;
-    const metres = (side.axis === 'length' ? L : W) / 1000;
-    const cost = metres * Number(f.price_per_m || 0);
+    const metres = e.len / 1000;
+    const r = Number(f.price_per_m || 0) * (e.curved ? factor : 1);
+    const cost = metres * r;
     edgeTotal += cost;
-    edgeLines.push({ side: side.key, sideLabel: side.label, finish: f.name, metres, rate: Number(f.price_per_m), cost });
+    edgeLines.push({ key: e.key, label: e.label, finish: f.name, metres, rate: r, curved: e.curved, cost });
   }
 
   let total = stone + edgeTotal;
@@ -55,16 +59,16 @@ export function quote(offcut, l, w, edges = {}, finishes = []) {
   if (minApplied) total = min;
 
   return {
-    areaM2, stone, edgeLines, edgeTotal,
+    shapeM2, blockM2, chargedM2, chargeBlock, stone, edgeLines, edgeTotal,
     total: Math.round(total * 100) / 100,
     minApplied,
   };
 }
 
-/** All offcuts that fit, cheapest first, each with its quote. */
-export function compare(offcuts, l, w, edges, finishes) {
+/** All available offcuts the piece fits, cheapest first, each with its quote. */
+export function compare(offcuts, piece, edges, finishes) {
   return offcuts
-    .filter((o) => o.status === 'available' && fits(o, l, w))
-    .map((o) => ({ offcut: o, q: quote(o, l, w, edges, finishes) }))
+    .filter((o) => o.status === 'available' && fits(o, piece))
+    .map((o) => ({ offcut: o, q: quote(o, piece, edges, finishes) }))
     .sort((a, b) => a.q.total - b.q.total);
 }
