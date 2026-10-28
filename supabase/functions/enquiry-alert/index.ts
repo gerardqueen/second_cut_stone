@@ -1,7 +1,7 @@
 // Second Cut Stone — email alert for new enquiries.
-// Deployed as a Supabase Edge Function called "enquiry-alert" (Verify JWT: off).
-// Called by a database trigger on every new enquiry (see supabase/005_enquiry_alerts.sql)
-// and every few days by the keep-alive workflow, which retries anything that failed.
+// Deployed as a Supabase Edge Function called "enquiry-alert" (Verify JWT: on — the public
+// anon key is enough to call it). The website calls it straight after saving an enquiry, and
+// the daily keep-alive workflow calls it too, which retries anything that failed.
 //
 // It ignores whatever it is sent and only emails enquiries that haven't been emailed yet,
 // so calling it can never send anything other than a real, unsent enquiry.
