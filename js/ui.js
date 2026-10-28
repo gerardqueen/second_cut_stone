@@ -10,7 +10,8 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 export const mm = (n) => `${Number(n).toLocaleString('en-GB')}mm`;
 
-export function mountChrome({ admin = false } = {}) {
+export function mountChrome({ admin = false, home = true } = {}) {
+  const base = home ? '' : './';
   const h = $('#site-header');
   if (h) {
     h.innerHTML = `
@@ -21,7 +22,7 @@ export function mountChrome({ admin = false } = {}) {
         <nav class="nav">
           ${admin
             ? `<a href="./">View site</a><a href="#" data-signout hidden>Sign out</a>`
-            : `<a href="#finder">Find a cut</a><a href="#stock">In the yard</a><a href="#pricing">Edges &amp; pricing</a><a href="#contact">Contact</a>`}
+            : `<a href="${base}#finder">Find a cut</a><a href="${base}#stock">In the yard</a><a href="${base}#pricing">Edges &amp; pricing</a><a href="#contact">Contact</a>`}
           <a class="parent" href="${SETTINGS.contact.parent}" target="_blank" rel="noopener">Granite Systems ↗</a>
         </nav>
       </div>`;
@@ -52,7 +53,7 @@ export function mountChrome({ admin = false } = {}) {
         </div>
         <div class="legal">
           <span>© ${new Date().getFullYear()} Second Cut Stone · Part of <a href="${c.parent}" target="_blank" rel="noopener">Granite Systems</a></span>
-          <a href="admin.html">Staff login</a>
+          <span><a href="privacy.html">Privacy notice</a> · <a href="admin.html">Staff login</a></span>
         </div>
       </div>`;
   }
