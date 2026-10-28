@@ -16,6 +16,10 @@ Customers first choose a **shape** (rectangle, square, circle, oval, half-moon, 
 
 A piece "fits" an offcut if its bounding rectangle fits either way round, after adding `cutAllowanceMm` (default 5mm) to each dimension. Change that, the price note and the minimum charge in `js/config.js`.
 
+## View in your room (pilot)
+
+For rectangle and square pieces that fit, the offcut pop-up shows **View in your room**. It builds a true-size 3D slab in the browser (three.js), textured with the offcut photo, and opens it in [model-viewer](https://modelviewer.dev): iPhone → Apple AR Quick Look (a USDZ is generated on the fly), Android → WebXR in Chrome. Desktop shows the 3D slab and a QR code linking to `?ar=<offcut id>&l=<mm>&w=<mm>` so the phone opens the same piece. Libraries load from jsDelivr only when the button is pressed.
+
 ## Files
 
 | Path | What it is |
@@ -32,6 +36,7 @@ A piece "fits" an offcut if its bounding rectangle fits either way round, after 
 | `js/shapes.js` | Shapes: measurements, area, edges, outline |
 | `js/profiles.js` | Edge profile outlines shown in the finish picker |
 | `supabase/004_edge_profiles.sql` | Lets each finish choose its profile picture |
+| `js/ar.js` | *Pilot:* "View in your room" — true-size 3D slab + phone AR (rectangles/squares) |
 
 ## 1. Run it locally (demo mode)
 
