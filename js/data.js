@@ -152,6 +152,9 @@ export async function submitEnquiry(e) {
   if (!c) { const s = load(); s.enquiries.unshift({ ...row, id: uid() }); save(s); return; }
   delete row.created_at; delete row.handled;
   must(await c.from('enquiries').insert(row));
+  // Email alert to the business. Never blocks or fails the customer's request;
+  // the daily keep-alive job retries anything that didn't send.
+  try { await c.functions.invoke('enquiry-alert', { body: {} }); } catch (e) { console.warn('Alert not sent yet', e); }
 }
 
 export async function listEnquiries() {
