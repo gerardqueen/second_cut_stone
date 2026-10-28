@@ -340,3 +340,10 @@ section.alt .diagram { background: #f6f6f6; }
   .ar-stage { height: 52vh; }
   .ar-qr { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- Text pages (privacy) ---------- */
+.prose { max-width: 760px; }
+.prose h2 { font-size: 20px; margin-top: 34px; }
+.prose ul { color: var(--grey); padding-left: 20px; margin: 0 0 1em; }
+.prose li { margin-bottom: 6px; }
+.prose a { color: var(--navy); }
