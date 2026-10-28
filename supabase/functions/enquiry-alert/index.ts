@@ -13,16 +13,24 @@
 //   SITE_URL        optional; link to the admin page in the email
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+// The websites call this straight from the browser, so it must answer CORS preflight requests.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 const gbp = (n: unknown) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
 
-Deno.serve(async () => {
-  const key = Deno.env.get('RESEND_API_KEY');
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  // Accept the secret however its name was capitalised when it was added in the dashboard.
+  const key = Deno.env.get('RESEND_API_KEY') ?? Deno.env.get('Resend_API_Key') ?? Deno.env.get('RESEND_API_key');
   const to = (Deno.env.get('ALERT_TO') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!key || !to.length) return json({ ok: false, reason: 'RESEND_API_KEY or ALERT_TO not set yet' });
 
