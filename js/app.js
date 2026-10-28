@@ -41,6 +41,7 @@ async function init() {
   renderStock();
   renderFinishTable();
   runFinder();
+  openFromLink();
 }
 
 // ---------- Finder ----------
@@ -159,7 +160,7 @@ function updateDetail() {
 
   const bd = $('#d-breakdown');
   const submit = $('#e-submit');
-  if (!ok) { bd.innerHTML = ''; $('#d-note').textContent = ''; if (submit) submit.disabled = true; return; }
+  if (!ok) { bd.innerHTML = ''; $('#d-note').textContent = ''; $('#d-ar').hidden = true; if (submit) submit.disabled = true; return; }
   const q = quote(o, piece, st.edges, FINISHES);
   const stoneLine = q.chargeBlock
     ? `Stone · cut from ${mm(Math.round(piece.bboxL))} × ${mm(Math.round(piece.bboxW))} (${q.chargedM2.toFixed(3)}m²) × ${money(o.price_per_m2)}/m²`
@@ -172,6 +173,38 @@ function updateDetail() {
     <tr class="total"><td>Total</td><td>${money(q.total)}</td></tr>`;
   $('#d-note').textContent = SETTINGS.priceNote;
   if (submit) submit.disabled = false;
+  $('#d-ar').hidden = !(st.shape === 'rectangle' || st.shape === 'square');
+}
+
+// ---------- View in your room (AR pilot) ----------
+async function openAR(o, piece) {
+  const share = new URL(location.href.split('#')[0].split('?')[0]);
+  share.search = new URLSearchParams({ ar: o.id, l: Math.round(piece.bboxL), w: Math.round(piece.bboxW) }).toString();
+  $('#ar').classList.add('open'); document.body.style.overflow = 'hidden';
+  const { showInRoom } = await import('./ar.js');
+  showInRoom($('#ar-host'), o, piece, share.toString());
+}
+function closeAR() {
+  $('#ar').classList.remove('open');
+  $('#ar-host').innerHTML = '';
+  if (!$('#detail').classList.contains('open')) document.body.style.overflow = '';
+}
+$$('[data-close-ar]').forEach((el) => el.addEventListener('click', closeAR));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#ar').classList.contains('open')) { e.stopImmediatePropagation(); closeAR(); } }, true);
+$('#d-ar-btn').addEventListener('click', () => {
+  const st = detail.get();
+  if (current && fits(current, st.piece)) openAR(current, st.piece);
+});
+
+/** A shared link (from the desktop QR code) reopens the same piece: ?ar=<offcut id>&l=<mm>&w=<mm> */
+function openFromLink() {
+  const p = new URLSearchParams(location.search);
+  const o = OFFCUTS.find((x) => x.id === p.get('ar'));
+  const l = +p.get('l'), w = +p.get('w');
+  if (!o || !(l > 0) || !(w > 0)) return;
+  openDetail(o.id, { shape: 'rectangle', dims: { length: l, width: w }, edges: {} });
+  const piece = detail.get().piece;
+  if (fits(o, piece)) openAR(o, piece);
 }
 
 function bindEnquiry() {
