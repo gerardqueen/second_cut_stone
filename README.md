@@ -18,7 +18,7 @@ A piece "fits" an offcut if its bounding rectangle fits either way round, after 
 
 ## Enquiry email alerts
 
-Every new enquiry triggers the `enquiry-alert` Edge Function, which emails the details (reply-to set to the customer). Secrets in Supabase → Edge Functions → Secrets:
+The site calls the `enquiry-alert` Edge Function straight after saving each enquiry (and the daily keep-alive retries any that failed). It emails the details (reply-to set to the customer). Secrets in Supabase → Edge Functions → Secrets:
 
 | Secret | Value |
 |---|---|
@@ -50,8 +50,8 @@ For rectangle and square pieces that fit, the offcut pop-up shows **View in your
 | `supabase/004_edge_profiles.sql` | Lets each finish choose its profile picture |
 | `privacy.html` | Privacy notice (linked from the footer and the enquiry form) |
 | `supabase/functions/enquiry-alert/index.ts` | Edge Function: emails each new enquiry via Resend |
-| `supabase/005_enquiry_alerts.sql` | Trigger that calls the alert function on every new enquiry |
-| `.github/workflows/keepalive.yml` | Pings Supabase every 3 days so the free project never pauses; retries unsent alerts |
+| `supabase/005_enquiry_alerts.sql` | Tracks which enquiries have been emailed |
+| `.github/workflows/keepalive.yml` | Pings Supabase daily so the free project never pauses; retries unsent alerts |
 | `js/ar.js` | *Pilot:* "View in your room" — true-size 3D slab + phone AR (rectangles/squares) |
 
 ## 1. Run it locally (demo mode)
