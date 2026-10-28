@@ -16,6 +16,18 @@ Customers first choose a **shape** (rectangle, square, circle, oval, half-moon, 
 
 A piece "fits" an offcut if its bounding rectangle fits either way round, after adding `cutAllowanceMm` (default 5mm) to each dimension. Change that, the price note and the minimum charge in `js/config.js`.
 
+## Enquiry email alerts
+
+Every new enquiry triggers the `enquiry-alert` Edge Function, which emails the details (reply-to set to the customer). Secrets in Supabase → Edge Functions → Secrets:
+
+| Secret | Value |
+|---|---|
+| `RESEND_API_KEY` | API key from resend.com (free plan: 3,000 emails/month) |
+| `ALERT_TO` | Where alerts go (comma-separate several) |
+| `ALERT_FROM` | Optional. Until a domain is verified in Resend, alerts can only go to the Resend account's own email |
+
+Once `secondcutstone.co.uk` is verified in Resend, set `ALERT_FROM` to e.g. `Second Cut Stone <alerts@secondcutstone.co.uk>` and alerts can go to any address.
+
 ## View in your room (pilot)
 
 For rectangle and square pieces that fit, the offcut pop-up shows **View in your room**. It builds a true-size 3D slab in the browser (three.js), textured with the offcut photo, and opens it in [model-viewer](https://modelviewer.dev): iPhone → Apple AR Quick Look (a USDZ is generated on the fly), Android → WebXR in Chrome. Desktop shows the 3D slab and a QR code linking to `?ar=<offcut id>&l=<mm>&w=<mm>` so the phone opens the same piece. Libraries load from jsDelivr only when the button is pressed.
@@ -36,6 +48,10 @@ For rectangle and square pieces that fit, the offcut pop-up shows **View in your
 | `js/shapes.js` | Shapes: measurements, area, edges, outline |
 | `js/profiles.js` | Edge profile outlines shown in the finish picker |
 | `supabase/004_edge_profiles.sql` | Lets each finish choose its profile picture |
+| `privacy.html` | Privacy notice (linked from the footer and the enquiry form) |
+| `supabase/functions/enquiry-alert/index.ts` | Edge Function: emails each new enquiry via Resend |
+| `supabase/005_enquiry_alerts.sql` | Trigger that calls the alert function on every new enquiry |
+| `.github/workflows/keepalive.yml` | Pings Supabase every 3 days so the free project never pauses; retries unsent alerts |
 | `js/ar.js` | *Pilot:* "View in your room" — true-size 3D slab + phone AR (rectangles/squares) |
 
 ## 1. Run it locally (demo mode)
