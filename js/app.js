@@ -1,6 +1,7 @@
 import { SETTINGS } from './config.js';
 import { listOffcuts, listFinishes, submitEnquiry } from './data.js';
 import { quote, compare, fits, money } from './pricing.js';
+import { SHAPES } from './shapes.js';
 import { $, $$, esc, mm, media, swatchSVG, pieceBuilder, mountChrome } from './ui.js';
 import { profileSVG, profileOf } from './profiles.js';
 
@@ -173,16 +174,22 @@ function updateDetail() {
     <tr class="total"><td>Total</td><td>${money(q.total)}</td></tr>`;
   $('#d-note').textContent = SETTINGS.priceNote;
   if (submit) submit.disabled = false;
-  $('#d-ar').hidden = !(st.shape === 'rectangle' || st.shape === 'square');
+  $('#d-ar').hidden = false;
 }
 
 // ---------- View in your room (AR pilot) ----------
-async function openAR(o, piece) {
+// Every shape works. A shared link (the desktop QR code) carries the shape and its measurements:
+//   ?ar=<offcut id>&s=<shape>&<dimension>=<mm>…[&h=left|right]
+// Older links using ?ar=…&l=<mm>&w=<mm> still open as a rectangle.
+async function openAR(o, st) {
   const share = new URL(location.href.split('#')[0].split('?')[0]);
-  share.search = new URLSearchParams({ ar: o.id, l: Math.round(piece.bboxL), w: Math.round(piece.bboxW) }).toString();
+  const params = { ar: o.id, s: st.shape };
+  for (const [k, v] of Object.entries(st.dims)) if (Number(v) > 0) params[k] = Math.round(v);
+  if (st.shape === 'lshape') params.h = st.hand;
+  share.search = new URLSearchParams(params).toString();
   $('#ar').classList.add('open'); document.body.style.overflow = 'hidden';
   const { showInRoom } = await import('./ar.js');
-  showInRoom($('#ar-host'), o, piece, share.toString());
+  showInRoom($('#ar-host'), o, st.piece, share.toString(), st);
 }
 function closeAR() {
   $('#ar').classList.remove('open');
@@ -193,18 +200,24 @@ $$('[data-close-ar]').forEach((el) => el.addEventListener('click', closeAR));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#ar').classList.contains('open')) { e.stopImmediatePropagation(); closeAR(); } }, true);
 $('#d-ar-btn').addEventListener('click', () => {
   const st = detail.get();
-  if (current && fits(current, st.piece)) openAR(current, st.piece);
+  if (current && fits(current, st.piece)) openAR(current, st);
 });
 
-/** A shared link (from the desktop QR code) reopens the same piece: ?ar=<offcut id>&l=<mm>&w=<mm> */
 function openFromLink() {
   const p = new URLSearchParams(location.search);
   const o = OFFCUTS.find((x) => x.id === p.get('ar'));
-  const l = +p.get('l'), w = +p.get('w');
-  if (!o || !(l > 0) || !(w > 0)) return;
-  openDetail(o.id, { shape: 'rectangle', dims: { length: l, width: w }, edges: {} });
-  const piece = detail.get().piece;
-  if (fits(o, piece)) openAR(o, piece);
+  if (!o) return;
+  let preset;
+  if (p.get('s') && SHAPES[p.get('s')]) {
+    const shape = p.get('s');
+    const dims = Object.fromEntries(SHAPES[shape].fields.map((f) => [f.key, +p.get(f.key) || 0]));
+    preset = { shape, dims, hand: p.get('h') === 'right' ? 'right' : 'left', edges: {} };
+  } else if (+p.get('l') > 0 && +p.get('w') > 0) {
+    preset = { shape: 'rectangle', dims: { length: +p.get('l'), width: +p.get('w') }, edges: {} };
+  } else return;
+  openDetail(o.id, preset);
+  const st = detail.get();
+  if (fits(o, st.piece)) openAR(o, st);
 }
 
 function bindEnquiry() {

@@ -178,3 +178,43 @@ export const SHAPE_ICONS = {
   semicircle: '<path d="M6 10 H42 A18 18 0 0 1 6 10 Z"/>',
   lshape: '<path d="M6 5 H42 V15 H17 V31 H6 Z"/>',
 };
+
+/**
+ * The piece outline as a list of [x, y] points in mm (same coordinates as `geometry`:
+ * x along the length, y from the back edge (0) to the front). Curves are sampled into
+ * `seg` points so the 3D slab and anything else can use plain polygons.
+ */
+export function outlinePoints(shape, dims = {}, hand = 'left', seg = 96) {
+  const g = geometry(shape, dims, hand);
+  if (!g.valid) return [];
+  const v = (k) => Math.max(0, Number(dims[k]) || 0);
+  const ellipse = (cx, cy, a, b, from, to, n) =>
+    Array.from({ length: n + 1 }, (_, i) => {
+      const t = from + (to - from) * (i / n);
+      return [cx + a * Math.cos(t), cy + b * Math.sin(t)];
+    });
+  switch (shape) {
+    case 'rectangle': case 'square':
+      return [[0, 0], [g.bboxL, 0], [g.bboxL, g.bboxW], [0, g.bboxW]];
+    case 'circle': {
+      const r = v('diameter') / 2;
+      return ellipse(r, r, r, r, 0, 2 * PI, seg).slice(0, -1);
+    }
+    case 'oval': {
+      const a = v('length') / 2, b = v('width') / 2;
+      return ellipse(a, b, a, b, 0, 2 * PI, seg).slice(0, -1);
+    }
+    case 'semicircle': {
+      // straight back edge along y = 0, curve bulging to the front (+y)
+      const r = v('diameter') / 2;
+      return ellipse(r, 0, r, r, 0, PI, Math.round(seg / 2));
+    }
+    case 'lshape': {
+      const L = v('length'), D1 = v('depth'), R = v('returnLength'), D2 = v('returnDepth');
+      const left = [[0, 0], [L, 0], [L, D1], [D2, D1], [D2, R], [0, R]];
+      return hand === 'right' ? left.map(([x, y]) => [L - x, y]) : left;
+    }
+    default:
+      return [];
+  }
+}

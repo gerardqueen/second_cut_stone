@@ -2,6 +2,7 @@
 // shows it in a 3D viewer, and hands it to the phone's AR (Quick Look on iPhone, WebXR on Android).
 // Libraries load only when someone opens it, so the rest of the site stays fast.
 import { swatchSVG, esc, mm } from './ui.js';
+import { outlinePoints } from './shapes.js';
 
 const MODEL_VIEWER = 'https://cdn.jsdelivr.net/npm/@google/model-viewer@4.1.0/dist/model-viewer-module.min.js';
 const QR_LIB = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
@@ -58,11 +59,19 @@ async function stoneCanvas(offcut, L, W) {
   return { canvas: c, avg: `rgb(${r},${gg},${b})` };
 }
 
-/** Build the slab and export it as GLB (viewer + Android) and USDZ (iPhone Quick Look). */
-async function buildModel(offcut, piece) {
+/**
+ * Build the slab in the piece's real shape and export it as GLB (viewer + Android)
+ * and USDZ (iPhone Quick Look).
+ * @param st  { shape, dims, hand } from the piece builder
+ */
+async function buildModel(offcut, piece, st) {
   const { THREE, GLTFExporter, USDZExporter } = await loadLibs();
   const L = piece.bboxL / 1000, W = piece.bboxW / 1000, T = (offcut.thickness_mm || 20) / 1000;
   const { canvas, avg } = await stoneCanvas(offcut, piece.bboxL, piece.bboxW);
+
+  // Outline in metres, centred on the piece, flipped so the front edge faces the viewer.
+  const pts = outlinePoints(st.shape, st.dims, st.hand);
+  const shape = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x / 1000 - L / 2, -(y / 1000 - W / 2))));
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -70,16 +79,22 @@ async function buildModel(offcut, piece) {
 
   const scene = new THREE.Scene();
   const slab = new THREE.Group(); slab.name = 'slab';
-  // body: the sides of the slab, in the stone's average colour
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(L, T * 0.995, W),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color(avg), roughness: 0.4, metalness: 0 }),
-  );
-  body.position.y = (T * 0.995) / 2; body.name = 'edges';
-  // top: the polished face with the stone photo; back edge of the photo = back of the piece
-  const topGeo = new THREE.PlaneGeometry(L, W); topGeo.rotateX(-Math.PI / 2);
+
+  // body: the slab's thickness, following the outline, in the stone's average colour
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: T * 0.995, bevelEnabled: false, curveSegments: 1 });
+  bodyGeo.rotateX(-Math.PI / 2);
+  const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: new THREE.Color(avg), roughness: 0.4, metalness: 0 }));
+  body.name = 'edges';
+
+  // top: the polished face, cut to the same outline, with the stone photo laid across it
+  const topGeo = new THREE.ShapeGeometry(shape, 1);
+  const pos = topGeo.attributes.position, uv = topGeo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + L / 2) / L, (pos.getY(i) + W / 2) / W);
+  uv.needsUpdate = true;
+  topGeo.rotateX(-Math.PI / 2);
   const top = new THREE.Mesh(topGeo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.32, metalness: 0 }));
   top.position.y = T; top.name = 'surface';
+
   slab.add(body, top);
   scene.add(slab);
 
@@ -98,23 +113,24 @@ let lastUrls = [];
  * Open the "View in your room" panel.
  * @param host    element to render into (inside a modal)
  * @param offcut  the chosen offcut
- * @param piece   geometry from shapes.js (rectangle or square)
+ * @param piece   geometry from shapes.js (any shape)
  * @param shareUrl link that reopens this view, for the desktop QR code
+ * @param st      { shape, dims, hand } from the piece builder
  */
-export async function showInRoom(host, offcut, piece, shareUrl) {
-  const size = `${mm(Math.round(piece.bboxL))} × ${mm(Math.round(piece.bboxW))} × ${offcut.thickness_mm}mm`;
+export async function showInRoom(host, offcut, piece, shareUrl, st) {
+  const size = `${piece.summary.replace(/ \(.*\)$/, '')}, ${offcut.thickness_mm}mm thick`;
   host.innerHTML = `
     <div class="ar-head">
       <div class="eyebrow" style="margin:0">Pilot · View in your room</div>
       <h2 style="margin:4px 0 2px">${esc(offcut.name)}</h2>
-      <p class="muted" style="margin:0">${esc(offcut.material)} · shown at true size ${size}</p>
+      <p class="muted" style="margin:0">${esc(offcut.material)} · shown at true size: ${esc(size)}</p>
     </div>
     <div class="ar-stage"><div class="ar-loading">Building your piece in 3D…</div></div>
     <div class="ar-foot"></div>`;
   const stage = host.querySelector('.ar-stage'), foot = host.querySelector('.ar-foot');
 
   let urls;
-  try { urls = await buildModel(offcut, piece); }
+  try { urls = await buildModel(offcut, piece, st); }
   catch (e) {
     console.error(e);
     stage.innerHTML = `<div class="ar-loading">Sorry, the 3D view couldn't load on this device.</div>`;
