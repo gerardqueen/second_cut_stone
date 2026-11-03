@@ -209,6 +209,25 @@ export async function declineRequest(userId) {
   const c = await client(); if (!c) return;
   must(await c.from('access_requests').delete().eq('user_id', userId));
 }
+/** Email a password-reset link that brings the user back to the admin page. */
+export async function requestPasswordReset(email) {
+  const c = await client();
+  if (!c) return;
+  const redirectTo = location.origin + location.pathname;
+  must(await c.auth.resetPasswordForEmail(email, { redirectTo }));
+}
+/** Set a new password for the user signed in through a reset link. */
+export async function updatePassword(password) {
+  const c = await client();
+  if (!c) return;
+  must(await c.auth.updateUser({ password }));
+}
+/** Calls back when Supabase signs someone in from a password-reset link. */
+export async function onPasswordRecovery(cb) {
+  const c = await client();
+  if (!c) return;
+  c.auth.onAuthStateChange((event) => { if (event === 'PASSWORD_RECOVERY') cb(); });
+}
 export async function signIn(email, password) {
   const c = await client();
   must(await c.auth.signInWithPassword({ email, password }));

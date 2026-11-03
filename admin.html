@@ -22,12 +22,28 @@
         <form class="panel login" id="login-form">
           <h2 id="l-title">Staff login</h2>
           <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" required></div>
-          <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required minlength="8"></div>
+          <div class="field" id="l-pass-field">
+            <label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required minlength="8">
+            <a href="#" id="l-forgot" class="muted" style="font-size:13px;justify-self:end">Forgot password?</a>
+          </div>
           <p class="hint" id="l-hint" hidden>At least 8 characters. An admin will need to approve your account before you can manage stock.</p>
           <button class="btn" type="submit" style="width:100%" id="l-submit">Sign in</button>
           <p class="error" id="l-error" hidden></p>
           <p class="success" id="l-ok" hidden style="margin-top:12px"></p>
           <p class="muted" style="margin:16px 0 0;text-align:center"><a href="#" id="l-toggle">New staff member? Create an account</a></p>
+        </form>
+      </div>
+
+      <!-- Set a new password (arrived from a reset email) -->
+      <div id="reset-view" hidden>
+        <form class="panel login" id="reset-form" novalidate>
+          <h2>Set a new password</h2>
+          <p class="muted" style="margin-top:0">Signed in as <strong id="r-email"></strong>. Choose a new password for your staff account.</p>
+          <div class="field"><label for="r-pass">New password</label><input id="r-pass" type="password" autocomplete="new-password" minlength="8" required></div>
+          <div class="field"><label for="r-pass2">Confirm new password</label><input id="r-pass2" type="password" autocomplete="new-password" minlength="8" required></div>
+          <p class="hint">At least 8 characters.</p>
+          <button class="btn" type="submit" style="width:100%" id="r-submit">Save new password</button>
+          <p class="error" id="r-error" hidden></p>
         </form>
       </div>
 

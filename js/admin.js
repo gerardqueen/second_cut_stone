@@ -1,6 +1,6 @@
 import { DEMO_MODE } from './config.js';
 import {
-  currentAdmin, signIn, signUp, signOut, listAccessRequests, listAdmins, approveAdmin, removeAdmin, declineRequest,
+  currentAdmin, signIn, signUp, signOut, requestPasswordReset, updatePassword, onPasswordRecovery, listAccessRequests, listAdmins, approveAdmin, removeAdmin, declineRequest,
   listOffcuts, saveOffcut, deleteOffcut, nextRef, uploadPhoto,
   listFinishes, saveFinish, deleteFinish, listEnquiries, setEnquiryHandled,
 } from './data.js';
@@ -14,20 +14,29 @@ let OFFCUTS = [], FINISHES = [], ENQ = [], REQS = [], ADMINS = [], ME = null;
 let pendingPhoto = null; // File waiting to upload on save
 
 // ---------- Auth ----------
-let signUpMode = false;
+// Read the reset-link details before Supabase tidies them out of the address bar.
+const authHash = new URLSearchParams(location.hash.slice(1));
+const arrivedFromReset = authHash.get('type') === 'recovery';
+const linkError = authHash.get('error_description');
+
+let mode = 'signin'; // 'signin' | 'signup' | 'forgot'
+let inRecovery = false;
+const views = ['#login-view', '#reset-view', '#pending-view', '#app-view'];
+const show = (id) => views.forEach((v) => ($(v).hidden = v !== id));
+
 async function boot() {
+  if (arrivedFromReset || inRecovery) return showReset();
   let who;
   try { who = await currentAdmin(); } catch (e) { who = null; console.error(e); }
-  if (!who) return showLogin();
+  if (!who) return showLogin(linkError ? 'That link has expired or was already used. Request a new one below.' : '');
   if (who.notAdmin) {
-    $('#login-view').hidden = true; $('#app-view').hidden = true; $('#pending-view').hidden = false;
+    show('#pending-view');
     $('#p-email').textContent = who.email;
     $('#p-signout').onclick = async () => { await signOut(); location.reload(); };
     return;
   }
   ME = who;
-  $('#login-view').hidden = true; $('#pending-view').hidden = true;
-  $('#app-view').hidden = false;
+  show('#app-view');
   $('#who').textContent = who.demo ? 'Demo mode — changes stay in this browser' : `Signed in as ${who.email}`;
   const so = $('[data-signout]');
   if (so && !who.demo) { so.hidden = false; so.onclick = async (e) => { e.preventDefault(); await signOut(); location.reload(); }; }
@@ -35,25 +44,46 @@ async function boot() {
   resetForm();
 }
 function showLogin(msg) {
-  $('#login-view').hidden = false; $('#app-view').hidden = true; $('#pending-view').hidden = true;
+  show('#login-view');
   if (msg) { $('#l-error').textContent = msg; $('#l-error').hidden = false; }
 }
-function setMode(up) {
-  signUpMode = up;
-  $('#l-title').textContent = up ? 'Create staff account' : 'Staff login';
-  $('#l-submit').textContent = up ? 'Create account' : 'Sign in';
-  $('#l-toggle').textContent = up ? 'Already have an account? Sign in' : 'New staff member? Create an account';
+async function showReset() {
+  inRecovery = true;
+  show('#reset-view');
+  try { const who = await currentAdmin(); $('#r-email').textContent = who?.email || 'your account'; } catch { $('#r-email').textContent = 'your account'; }
+  history.replaceState(null, '', location.pathname); // keep the token out of the address bar
+  $('#r-pass').focus();
+}
+onPasswordRecovery(() => { if (!inRecovery) showReset(); });
+
+function setMode(m) {
+  mode = m;
+  const up = m === 'signup', forgot = m === 'forgot';
+  $('#l-title').textContent = up ? 'Create staff account' : forgot ? 'Reset your password' : 'Staff login';
+  $('#l-submit').textContent = up ? 'Create account' : forgot ? 'Email me a reset link' : 'Sign in';
+  $('#l-toggle').textContent = m === 'signin' ? 'New staff member? Create an account' : 'Back to sign in';
+  $('#l-pass-field').hidden = forgot;
+  $('#l-pass').required = !forgot;
+  $('#l-forgot').hidden = m !== 'signin';
   $('#l-pass').autocomplete = up ? 'new-password' : 'current-password';
   $('#l-hint').hidden = !up; $('#l-error').hidden = true; $('#l-ok').hidden = true;
 }
-$('#l-toggle').addEventListener('click', (e) => { e.preventDefault(); setMode(!signUpMode); });
+$('#l-toggle').addEventListener('click', (e) => { e.preventDefault(); setMode(mode === 'signin' ? 'signup' : 'signin'); });
+$('#l-forgot').addEventListener('click', (e) => { e.preventDefault(); setMode('forgot'); $('#l-email').focus(); });
+
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = $('#l-error'), ok = $('#l-ok'); err.hidden = true; ok.hidden = true;
   const email = $('#l-email').value.trim(), pass = $('#l-pass').value;
   const btn = $('#l-submit'); btn.disabled = true;
   try {
-    if (signUpMode) {
+    if (mode === 'forgot') {
+      if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Please enter the email you sign in with.');
+      await requestPasswordReset(email);
+      // Same message whether or not the account exists, so the form can't be used to check emails.
+      ok.innerHTML = `If <strong>${esc(email)}</strong> has a staff account, a reset link is on its way. Check your inbox (and spam), then follow the link to choose a new password.`;
+      ok.hidden = false;
+    } else if (mode === 'signup') {
       if (pass.length < 8) throw new Error('Password must be at least 8 characters.');
       const { needsConfirm } = await signUp(email, pass);
       if (needsConfirm) {
@@ -65,9 +95,34 @@ $('#login-form').addEventListener('submit', async (e) => {
     }
   } catch (ex) {
     const m = ex.message || 'Something went wrong';
-    err.textContent = /confirm/i.test(m) ? 'Please click the confirmation link in your email first.' : m;
+    err.textContent = /confirm/i.test(m) ? 'Please click the confirmation link in your email first.'
+      : /rate limit|too many|seconds/i.test(m) ? 'Too many requests just now. Please wait a minute and try again.'
+      : /invalid login/i.test(m) ? 'Email or password is wrong. Use "Forgot password?" if you need a new one.'
+      : m;
     err.hidden = false;
   } finally { btn.disabled = false; }
+});
+
+$('#reset-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('#r-error'); err.hidden = true;
+  const p1 = $('#r-pass').value, p2 = $('#r-pass2').value;
+  if (p1.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.hidden = false; return; }
+  if (p1 !== p2) { err.textContent = "The two passwords don't match."; err.hidden = false; return; }
+  const btn = $('#r-submit'); btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await updatePassword(p1);
+    inRecovery = false;
+    await boot();
+    const note = document.createElement('p');
+    note.className = 'success'; note.textContent = 'Password updated. You are signed in.';
+    $('#app-view').prepend(note); setTimeout(() => note.remove(), 6000);
+  } catch (ex) {
+    err.textContent = /same|different/i.test(ex.message || '') ? 'Choose a password different from your old one.'
+      : /session|expired|jwt/i.test(ex.message || '') ? 'This reset link has expired. Go back to the login page and request a new one.'
+      : (ex.message || 'Could not save the new password.');
+    err.hidden = false;
+  } finally { btn.disabled = false; btn.textContent = 'Save new password'; }
 });
 
 // ---------- Tabs ----------

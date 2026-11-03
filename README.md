@@ -82,6 +82,8 @@ The anon key is meant to be public — the database rules only let admins change
 
 Staff go to `/admin.html` → **Create an account**. They can't see or change anything until an existing admin approves them in **Admins** tab (where admins can also be removed — you can't remove yourself, so there's always one left). Sign-ups stay switched on in Supabase for this to work; an unapproved account has no access.
 
+**Forgotten passwords:** "Forgot password?" on the login emails a reset link (sent by Supabase) that returns to `/admin.html`, where the user sets a new password. The link must match the Supabase Site URL (`https://secondcutstone.co.uk/admin.html`).
+
 ## 3. Deploy on GitHub Pages
 
 1. Push this folder to the repo's `main` branch.
