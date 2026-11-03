@@ -89,14 +89,15 @@ Staff go to `/admin.html` → **Create an account**. They can't see or change an
 3. Live at `https://<owner>.github.io/<repo>/` in a minute or two.
 4. In Supabase **Authentication → URL Configuration**, set the Site URL to that address.
 
-## 4. Custom domain (later)
+## 4. Custom domain
 
-1. Add a file called `CNAME` containing just the domain, e.g. `secondcutstone.co.uk`.
-2. At the domain registrar, add DNS records:
-   - Apex domain: `A` records → `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
-   - `www`: `CNAME` → `<owner>.github.io`
-3. Repo **Settings → Pages → Custom domain**, enter it, tick **Enforce HTTPS** once the certificate is issued.
-4. Update the Site URL in Supabase.
+Live at **https://secondcutstone.co.uk** (www redirects to it). Set up:
+
+1. `CNAME` file in the repo root containing `secondcutstone.co.uk`; repo **Settings → Pages → Custom domain** set to the same, **Enforce HTTPS** on.
+2. DNS in Cloudflare (Granite Systems' account), all **DNS only** (grey cloud) so GitHub can issue the certificate:
+   - `A` `@` → `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   - `CNAME` `www` → `gerardqueen.github.io`
+3. Supabase **Authentication → URL Configuration**: Site URL `https://secondcutstone.co.uk/admin.html`.
 
 ## Fonts
 

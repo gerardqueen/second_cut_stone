@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   if (!key || !to.length) return json({ ok: false, reason: 'RESEND_API_KEY or ALERT_TO not set yet' });
 
   const from = Deno.env.get('ALERT_FROM') ?? 'Second Cut Stone <onboarding@resend.dev>';
-  const site = Deno.env.get('SITE_URL') ?? 'https://gerardqueen.github.io/second_cut_stone/';
+  const site = Deno.env.get('SITE_URL') ?? 'https://secondcutstone.co.uk/';
   const db = createClient(Deno.env.get('SUPABASE_URL')!, (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY'))!);
 
   const since = new Date(Date.now() - 14 * 864e5).toISOString();
