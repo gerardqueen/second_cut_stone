@@ -16,6 +16,10 @@ Customers first choose a **shape** (rectangle, square, circle, oval, half-moon, 
 
 A piece "fits" an offcut if its bounding rectangle fits either way round, after adding `cutAllowanceMm` (default 5mm) to each dimension. Change that, the price note and the minimum charge in `js/config.js`.
 
+## Materials
+
+Admin → **Materials** holds the stones staff can pick when logging an offcut (Granite, Quartz, Slate…). Add new ones there, or choose **+ Add a new material…** in the offcut form, which adds it to the list too. Renaming a material renames it on all its offcuts; untick **Active** to hide one from the picker. Customers see a material in the filters once an offcut in it is in stock. Offcuts without a photo get a stone look based on the material (slate, travertine, limestone, sandstone, onyx, terrazzo, quartzite, porcelain and more in `js/ui.js`).
+
 ## Enquiry email alerts
 
 The site calls the `enquiry-alert` Edge Function straight after saving each enquiry (and the daily keep-alive retries any that failed). It emails the details (reply-to set to the customer). Secrets in Supabase → Edge Functions → Secrets:
@@ -52,6 +56,7 @@ For any piece that fits (rectangle, square, circle, oval, half-moon, L-shape lef
 | `supabase/functions/enquiry-alert/index.ts` | Edge Function: emails each new enquiry via Resend |
 | `supabase/005_enquiry_alerts.sql` | Tracks which enquiries have been emailed |
 | `.github/workflows/keepalive.yml` | Pings Supabase daily so the free project never pauses; retries unsent alerts |
+| `supabase/006_materials.sql` | Managed list of materials (admin → Materials) |
 | `js/ar.js` | *Pilot:* "View in your room" — true-size 3D slab of any shape + phone AR |
 
 ## 1. Run it locally (demo mode)

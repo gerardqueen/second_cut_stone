@@ -14,6 +14,7 @@ const must = ({ data, error }) => { if (error) throw new Error(error.message); r
 
 // ---------------- Demo store ----------------
 const DEMO_KEY = 'scs-demo-v2';
+export const DEFAULT_MATERIALS = ['Granite', 'Quartz', 'Marble', 'Dekton', 'Silestone', 'Corian', 'Sensa Granite', 'Limestone', 'Slate'];
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 function seed() {
   const f = (name, description, price_per_m, sort, profile) => ({ id: uid(), name, description, price_per_m, sort, active: true, profile });
@@ -38,6 +39,7 @@ function seed() {
       o('SC-008', 'Quartz', 'Pure White', 2100, 650, 210, 20, 'Full-depth worktop offcut'),
     ],
     enquiries: [],
+    materials: DEFAULT_MATERIALS.map((name, i) => ({ id: uid(), name, description: '', sort: i + 1, active: true })),
   };
 }
 function load() {
@@ -143,6 +145,63 @@ export async function deleteFinish(id) {
   const c = await client();
   if (!c) { const s = load(); s.finishes = s.finishes.filter((x) => x.id !== id); save(s); return; }
   must(await c.from('edge_finishes').delete().eq('id', id));
+}
+
+// ---------------- Materials ----------------
+/**
+ * The managed material list, in display order. If the materials table hasn't been
+ * created yet, falls back to the built-in list plus anything already on an offcut
+ * (marked `builtIn: true`, read-only) so the site keeps working.
+ */
+export async function listMaterials({ includeInactive = false } = {}) {
+  const c = await client();
+  let rows;
+  if (!c) {
+    const st = load();
+    if (!st.materials) { st.materials = DEFAULT_MATERIALS.map((name, i) => ({ id: uid(), name, description: '', sort: i + 1, active: true })); save(st); }
+    rows = st.materials;
+  } else {
+    const { data, error } = await c.from('materials').select('*').order('sort').order('name');
+    if (error) {
+      const used = (await listOffcuts({ includeSold: true }).catch(() => [])).map((o) => o.material).filter(Boolean);
+      const names = [...new Set([...DEFAULT_MATERIALS, ...used])];
+      return names.map((name, i) => ({ id: `builtin-${i}`, name, sort: i + 1, active: true, builtIn: true }));
+    }
+    rows = data;
+  }
+  rows = [...rows].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.name.localeCompare(b.name));
+  return includeInactive ? rows : rows.filter((m) => m.active);
+}
+
+/** Add or update a material. Renaming also renames it on every offcut that uses it. */
+export async function saveMaterial(m) {
+  const row = { name: m.name.trim(), description: m.description || null, sort: +m.sort || 0, active: m.active !== false };
+  if (!row.name) throw new Error('Give the material a name.');
+  const c = await client();
+  if (!c) {
+    const s = load(); s.materials ||= [];
+    if (s.materials.some((x) => x.id !== m.id && x.name.toLowerCase() === row.name.toLowerCase())) throw new Error(`"${row.name}" is already in the list.`);
+    if (m.id) {
+      const old = s.materials.find((x) => x.id === m.id);
+      s.materials = s.materials.map((x) => (x.id === m.id ? { ...x, ...row } : x));
+      if (old && old.name !== row.name) s.offcuts = s.offcuts.map((o) => (o.material === old.name ? { ...o, material: row.name } : o));
+    } else s.materials.push({ ...row, id: uid() });
+    save(s); return;
+  }
+  if (m.id) {
+    const { data: old } = await c.from('materials').select('name').eq('id', m.id).maybeSingle();
+    must(await c.from('materials').update(row).eq('id', m.id));
+    if (old && old.name !== row.name) must(await c.from('offcuts').update({ material: row.name }).eq('material', old.name));
+  } else {
+    const { error } = await c.from('materials').insert(row);
+    if (error) throw new Error(/duplicate|unique/i.test(error.message) ? `"${row.name}" is already in the list.` : error.message);
+  }
+}
+
+export async function deleteMaterial(id) {
+  const c = await client();
+  if (!c) { const s = load(); s.materials = (s.materials || []).filter((x) => x.id !== id); save(s); return; }
+  must(await c.from('materials').delete().eq('id', id));
 }
 
 // ---------------- Enquiries ----------------

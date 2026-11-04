@@ -3,6 +3,7 @@ import {
   currentAdmin, signIn, signUp, signOut, requestPasswordReset, updatePassword, onPasswordRecovery, listAccessRequests, listAdmins, approveAdmin, removeAdmin, declineRequest,
   listOffcuts, saveOffcut, deleteOffcut, nextRef, uploadPhoto,
   listFinishes, saveFinish, deleteFinish, listEnquiries, setEnquiryHandled,
+  listMaterials, saveMaterial, deleteMaterial,
 } from './data.js';
 import { money } from './pricing.js';
 import { PROFILES, PROFILE_KEYS, profileSVG, profileOf } from './profiles.js';
@@ -10,7 +11,7 @@ import { $, $$, esc, mm, media, mountChrome } from './ui.js';
 
 mountChrome({ admin: true });
 
-let OFFCUTS = [], FINISHES = [], ENQ = [], REQS = [], ADMINS = [], ME = null;
+let OFFCUTS = [], FINISHES = [], ENQ = [], REQS = [], ADMINS = [], MATERIALS = [], ME = null;
 let pendingPhoto = null; // File waiting to upload on save
 
 // ---------- Auth ----------
@@ -132,11 +133,11 @@ $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
 }));
 
 async function refreshAll() {
-  [OFFCUTS, FINISHES, ENQ, REQS, ADMINS] = await Promise.all([
+  [OFFCUTS, FINISHES, ENQ, REQS, ADMINS, MATERIALS] = await Promise.all([
     listOffcuts({ includeSold: true }), listFinishes({ includeInactive: true }), listEnquiries(),
-    listAccessRequests().catch(() => []), listAdmins().catch(() => []),
+    listAccessRequests().catch(() => []), listAdmins().catch(() => []), listMaterials({ includeInactive: true }),
   ]);
-  renderOffcuts(); renderFinishes(); renderEnquiries(); renderAdmins();
+  renderOffcuts(); renderFinishes(); renderEnquiries(); renderAdmins(); renderMaterials(); fillMaterialPicker();
 }
 
 // ---------- Offcut form ----------
@@ -175,6 +176,7 @@ async function resetForm() {
   $('#o-cancel').hidden = true;
   $('#o-error').hidden = true;
   $('#o-thick').value = '20';
+  fillMaterialPicker();
   $('#o-ref').value = await nextRef();
   updateArea();
 }
@@ -183,7 +185,7 @@ $('#o-cancel').addEventListener('click', resetForm);
 function editOffcut(id) {
   const o = OFFCUTS.find((x) => x.id === id); if (!o) return;
   $('#o-id').value = o.id; $('#o-ref').value = o.ref || ''; $('#o-status').value = o.status;
-  $('#o-material').value = o.material; $('#o-name').value = o.name;
+  fillMaterialPicker(o.material); $('#o-name').value = o.name;
   $('#o-length').value = o.length_mm; $('#o-width').value = o.width_mm;
   if (![...$('#o-thick').options].some((op) => op.value === String(o.thickness_mm))) $('#o-thick').insertAdjacentHTML('beforeend', `<option>${o.thickness_mm}</option>`);
   $('#o-thick').value = String(o.thickness_mm);
@@ -201,7 +203,7 @@ form.addEventListener('submit', async (e) => {
   const err = $('#o-error'); err.hidden = true;
   const v = {
     id: $('#o-id').value || undefined, ref: $('#o-ref').value.trim(), status: $('#o-status').value,
-    material: $('#o-material').value.trim(), name: $('#o-name').value.trim(),
+    material: chosenMaterial(), name: $('#o-name').value.trim(),
     length_mm: +$('#o-length').value, width_mm: +$('#o-width').value, thickness_mm: +$('#o-thick').value,
     price_per_m2: +$('#o-price').value, notes: $('#o-notes').value.trim(), photo_url: $('#o-photo-url').value,
   };
@@ -212,6 +214,10 @@ form.addEventListener('submit', async (e) => {
   if (v.width_mm > v.length_mm) [v.length_mm, v.width_mm] = [v.width_mm, v.length_mm];
   const btn = $('#o-save'); btn.disabled = true; const label = btn.textContent;
   try {
+    // A material typed in as new joins the managed list, so it's offered next time.
+    if (!MATERIALS.some((m) => m.name.toLowerCase() === v.material.toLowerCase()) && !MATERIALS[0]?.builtIn) {
+      await saveMaterial({ name: v.material, sort: MATERIALS.length + 1, active: true });
+    }
     if (pendingPhoto) { btn.textContent = 'Uploading photo…'; v.photo_url = await uploadPhoto(pendingPhoto); }
     btn.textContent = 'Saving…';
     await saveOffcut(v);
@@ -303,6 +309,87 @@ $('#f-add').addEventListener('click', async () => {
   await saveFinish({ name: 'New finish', description: '', price_per_m: 0, sort: FINISHES.length + 1, active: false });
   await refreshAll();
 });
+
+// ---------- Materials ----------
+const NEW_MAT = '__new__';
+/** Fill the offcut form's material picker. `current` keeps an offcut's material selectable even if it's hidden. */
+function fillMaterialPicker(current) {
+  const sel = $('#o-material');
+  const keep = current ?? (sel.value !== NEW_MAT ? sel.value : '');
+  const names = MATERIALS.filter((m) => m.active).map((m) => m.name);
+  if (keep && !names.some((n) => n.toLowerCase() === keep.toLowerCase())) names.push(keep);
+  sel.innerHTML = `<option value="" disabled ${keep ? '' : 'selected'}>Choose a material…</option>` +
+    names.map((n) => `<option ${n === keep ? 'selected' : ''}>${esc(n)}</option>`).join('') +
+    `<option value="${NEW_MAT}">+ Add a new material…</option>`;
+  $('#o-material-new').hidden = true; $('#o-material-new').value = '';
+}
+const tidyName = (v) => v.trim().replace(/\s+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+function chosenMaterial() {
+  const sel = $('#o-material');
+  return sel.value === NEW_MAT ? tidyName($('#o-material-new').value) : sel.value;
+}
+$('#o-material').addEventListener('change', (e) => {
+  const isNew = e.target.value === NEW_MAT;
+  $('#o-material-new').hidden = !isNew; $('#o-material-new').required = isNew;
+  if (isNew) $('#o-material-new').focus();
+});
+
+function renderMaterials() {
+  const builtIn = MATERIALS[0]?.builtIn;
+  $('#m-setup').hidden = !builtIn;
+  $('#m-setup').textContent = builtIn ? 'The materials list isn\'t set up in the database yet, so this is the built-in list and can\'t be edited. Run supabase/006_materials.sql once to switch it on.' : '';
+  $('#m-add').disabled = !!builtIn; $('#m-new').disabled = !!builtIn;
+  const count = (name) => OFFCUTS.filter((o) => o.material?.toLowerCase() === name.toLowerCase());
+  $('#m-table').innerHTML = `
+    <thead><tr><th>Order</th><th>Material</th><th>Offcuts</th><th>Active</th><th></th></tr></thead>
+    <tbody>${MATERIALS.map((m) => {
+      const used = count(m.name), inStock = used.filter((o) => o.status !== 'sold').length;
+      return `<tr data-mid="${esc(m.id)}">
+        <td><input type="number" value="${m.sort ?? 0}" data-k="sort" style="width:64px" class="status-select" ${builtIn ? 'disabled' : ''}></td>
+        <td><input value="${esc(m.name)}" data-k="name" class="status-select" style="width:100%;min-width:160px" ${builtIn ? 'disabled' : ''}></td>
+        <td class="muted" style="white-space:nowrap">${used.length ? `${used.length} (${inStock} in stock)` : 'none'}</td>
+        <td><input type="checkbox" data-k="active" ${m.active ? 'checked' : ''} ${builtIn ? 'disabled' : ''}></td>
+        <td>${builtIn ? '' : `<div class="inline-actions">
+          <button class="btn small" data-msave="${esc(m.id)}">Save</button>
+          ${used.length ? `<span class="muted" style="font-size:12px;align-self:center">In use: untick Active to hide</span>` : `<button class="btn small ghost" data-mdel="${esc(m.id)}">Delete</button>`}
+        </div>`}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+  $$('[data-msave]').forEach((b) => b.addEventListener('click', async () => {
+    const tr = b.closest('tr'), get = (k) => $(`[data-k="${k}"]`, tr);
+    const before = MATERIALS.find((m) => m.id === b.dataset.msave);
+    const name = tidyName(get('name').value);
+    b.disabled = true; b.textContent = 'Saving…';
+    try {
+      await saveMaterial({ id: b.dataset.msave, name, sort: +get('sort').value, active: get('active').checked });
+      await refreshAll();
+      if (before && before.name !== name) flash(`Renamed ${before.name} to ${name} on ${count(name).length} offcut(s).`);
+    } catch (ex) { alertRow(tr, ex); b.disabled = false; b.textContent = 'Save'; }
+  }));
+  $$('[data-mdel]').forEach((b) => b.addEventListener('click', async () => {
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to delete'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Delete'; } }, 3500); return; }
+    b.disabled = true;
+    try { await deleteMaterial(b.dataset.mdel); await refreshAll(); } catch (ex) { alertRow(b.closest('tr'), ex); }
+  }));
+}
+function flash(msg) {
+  const n = document.createElement('p'); n.className = 'success'; n.textContent = msg; n.style.marginBottom = '12px';
+  $('[data-pane=materials]').prepend(n); setTimeout(() => n.remove(), 6000);
+}
+async function addMaterial() {
+  const err = $('#m-error'); err.hidden = true;
+  const name = tidyName($('#m-new').value);
+  if (!name) { err.textContent = 'Type a material name first.'; err.hidden = false; return; }
+  const btn = $('#m-add'); btn.disabled = true;
+  try {
+    await saveMaterial({ name, sort: Math.max(0, ...MATERIALS.map((m) => m.sort || 0)) + 1, active: true });
+    $('#m-new').value = '';
+    await refreshAll();
+    flash(`${name} added. It's now in the material picker when logging an offcut.`);
+  } catch (ex) { err.textContent = ex.message; err.hidden = false; } finally { btn.disabled = false; }
+}
+$('#m-add').addEventListener('click', addMaterial);
+$('#m-new').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMaterial(); } });
 
 // ---------- Enquiries ----------
 function renderEnquiries() {

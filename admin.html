@@ -68,6 +68,7 @@
         <div class="tabs" role="tablist">
           <button class="active" data-tab="stock">Offcuts</button>
           <button data-tab="edges">Edge finishes</button>
+          <button data-tab="materials">Materials</button>
           <button data-tab="enquiries">Enquiries <span id="enq-badge"></span></button>
           <button data-tab="admins">Admins <span id="adm-badge"></span></button>
         </div>
@@ -98,8 +99,8 @@
               </div>
               <div class="row2">
                 <div class="field"><label for="o-material">Material</label>
-                  <input id="o-material" list="materials" required placeholder="Granite">
-                  <datalist id="materials"><option>Granite</option><option>Quartz</option><option>Marble</option><option>Dekton</option><option>Silestone</option><option>Corian</option><option>Sensa Granite</option><option>Limestone</option></datalist>
+                  <select id="o-material" required></select>
+                  <input id="o-material-new" placeholder="New material, e.g. Slate" hidden style="margin-top:8px">
                 </div>
                 <div class="field"><label for="o-name">Colour / name</label><input id="o-name" required placeholder="Nero Assoluto"></div>
               </div>
@@ -142,6 +143,18 @@
             <table class="table" id="f-table"></table>
           </div>
           <button class="btn ghost" style="margin-top:14px" id="f-add">+ Add finish</button>
+        </div>
+
+        <!-- Materials -->
+        <div data-pane="materials" hidden>
+          <p>The stones staff can pick when logging an offcut. Customers see a material once an offcut in it is in stock. Renaming one renames it on all its offcuts; untick <strong>Active</strong> to stop it appearing in the picker without changing existing offcuts.</p>
+          <p class="error" id="m-setup" hidden></p>
+          <div class="toolbar" style="margin:14px 0">
+            <input id="m-new" placeholder="New material, e.g. Slate" style="min-width:240px">
+            <button class="btn" id="m-add">+ Add material</button>
+            <span class="error" id="m-error" hidden></span>
+          </div>
+          <div class="table-wrap"><table class="table" id="m-table"></table></div>
         </div>
 
         <!-- Admins -->

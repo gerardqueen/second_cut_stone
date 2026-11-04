@@ -64,6 +64,15 @@ function hash(str) { let h = 2166136261; for (const ch of String(str)) { h ^= ch
 function rng(seed) { let s = seed || 1; return () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909)) >>> 0) / 4294967296; }
 function palette(name = '', material = '') {
   const n = `${name} ${material}`.toLowerCase();
+  // material-led looks first, so e.g. any slate reads as slate whatever its colour name
+  if (/slate/.test(n)) return { base: '#3f4549', fleck: ['#4b5257', '#353a3e', '#5a6166'], vein: '#596066' };
+  if (/travertine/.test(n)) return { base: '#e3d6c0', fleck: ['#d2c3a8', '#ede3d1', '#c9b79a'], vein: '#c8b593' };
+  if (/limestone/.test(n)) return { base: '#e6dfcf', fleck: ['#d8cfbb', '#cfc5ae', '#efe9dc'], vein: null };
+  if (/sandstone/.test(n)) return { base: '#cdb48c', fleck: ['#bfa47a', '#d9c29c', '#a88d66'], vein: null };
+  if (/onyx/.test(n)) return { base: '#efe3c9', fleck: ['#e4d3ae', '#f6eedc'], vein: '#c9a96a' };
+  if (/terrazzo/.test(n)) return { base: '#e8e5df', fleck: ['#9a9893', '#c46f4f', '#5c6f7a', '#2f2f2f'], vein: null };
+  if (/quartzite/.test(n)) return { base: '#e9e8e4', fleck: ['#d9d8d3', '#cfcdc7'], vein: '#a9a7a1' };
+  if (/porcelain|ceramic|sintered|neolith/.test(n)) return { base: '#c9c7c2', fleck: ['#bdbbb6', '#d4d2cd'], vein: null };
   if (/nero|black|absolute|noir|anthracite|ebony/.test(n)) return { base: '#1f2022', fleck: ['#3a3c40', '#55585d', '#0d0d0e'], vein: null };
   if (/calacatta|gold/.test(n)) return { base: '#f2efe9', fleck: ['#e2ddd4', '#d6cfc2'], vein: '#b39a6b' };
   if (/carrara|statuario|marble/.test(n)) return { base: '#eeeeec', fleck: ['#dcdcdb', '#cfd0d1'], vein: '#9a9c9f' };
