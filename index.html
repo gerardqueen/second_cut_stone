@@ -24,19 +24,19 @@
     }}
   </script>
 </head>
-<body>
+<body data-content-page="home">
   <header class="site-header" id="site-header"></header>
 
   <main>
     <section class="hero" style="padding:0">
       <div class="stone" id="hero-stone" aria-hidden="true"></div>
       <div class="wrap">
-        <div class="eyebrow">Kirkcaldy, Fife · from the Granite Systems workshop</div>
-        <h1>Premium stone offcuts, cut to your size</h1>
-        <p class="lede">Granite, quartz, marble and more for vanities, hearths, sills, shelves and chopping boards. Enter your measurements, choose your edges and see the price for every piece in the yard.</p>
+        <div class="eyebrow" data-content="hero.eyebrow">Kirkcaldy, Fife · from the Granite Systems workshop</div>
+        <h1 data-content="hero.heading">Premium stone offcuts, cut to your size</h1>
+        <p class="lede" data-content="hero.text">Granite, quartz, marble and more for vanities, hearths, sills, shelves and chopping boards. Enter your measurements, choose your edges and see the price for every piece in the yard.</p>
         <div class="actions">
-          <a class="btn light" href="#finder">Price my piece</a>
-          <a class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.7)" href="#stock">Browse the yard</a>
+          <a class="btn light" href="#finder" data-content="hero.button1">Price my piece</a>
+          <a class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.7)" href="#stock" data-content="hero.button2">Browse the yard</a>
         </div>
       </div>
     </section>
@@ -44,9 +44,9 @@
     <section id="finder" class="alt">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow">Step 1 · your piece</div>
-          <h2>Find your cut</h2>
-          <p>Pick a shape, enter its measurements and choose your edges. We'll show every offcut it can be cut from, cheapest first, with the full price.</p>
+          <div class="eyebrow" data-content="finder.eyebrow">Step 1 · your piece</div>
+          <h2 data-content="finder.heading">Find your cut</h2>
+          <p data-content="finder.text">Pick a shape, enter its measurements and choose your edges. We'll show every offcut it can be cut from, cheapest first, with the full price.</p>
         </div>
         <div class="finder">
           <form class="panel" id="finder-form" autocomplete="off" novalidate>
@@ -80,9 +80,9 @@
     <section id="stock">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow">Step 2 · or start from the stone</div>
-          <h2>In the yard now</h2>
-          <p>Every offcut is photographed and measured. Pick one you like and price a piece cut from it.</p>
+          <div class="eyebrow" data-content="stock.eyebrow">Step 2 · or start from the stone</div>
+          <h2 data-content="stock.heading">In the yard now</h2>
+          <p data-content="stock.text">Every offcut is photographed and measured. Pick one you like and price a piece cut from it.</p>
         </div>
         <div class="toolbar">
           <label class="sr-only" for="s-material">Material</label>
@@ -103,13 +103,13 @@
       <div class="wrap">
         <div class="finder" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
           <div>
-            <div class="eyebrow">How pricing works</div>
-            <h2>Simple, upfront pricing</h2>
-            <p>Each offcut has its own price per square metre. You pay for the area of the piece you need, plus each finished edge by the metre. Cut edges that sit against a wall or cabinet don't need finishing.</p>
+            <div class="eyebrow" data-content="pricing.eyebrow">How pricing works</div>
+            <h2 data-content="pricing.heading">Simple, upfront pricing</h2>
+            <p data-content="pricing.text">Each offcut has its own price per square metre. You pay for the area of the piece you need, plus each finished edge by the metre. Cut edges that sit against a wall or cabinet don't need finishing.</p>
             <div class="steps" style="grid-template-columns:1fr;gap:18px;margin-top:26px">
-              <div class="step"><h3>Stone</h3><p id="stone-rule">Area (m²) × the offcut's £/m². Round and L-shaped pieces are priced on the rectangle they're cut from.</p></div>
-              <div class="step"><h3>Edges</h3><p>Length of each finished edge (m) × that finish's £/m.</p></div>
-              <div class="step"><h3>Request</h3><p>Send the quote to us and we'll confirm, cut and finish it for collection.</p></div>
+              <div class="step"><h3 data-content="step1.title">Stone</h3><p id="stone-rule" data-content="step1.text">Area (m²) × the offcut's £/m². Round and L-shaped pieces are priced on the rectangle they're cut from.</p></div>
+              <div class="step"><h3 data-content="step2.title">Edges</h3><p data-content="step2.text">Length of each finished edge (m) × that finish's £/m.</p></div>
+              <div class="step"><h3 data-content="step3.title">Request</h3><p data-content="step3.text">Send the quote to us and we'll confirm, cut and finish it for collection.</p></div>
             </div>
           </div>
           <div>
@@ -117,7 +117,7 @@
             <div class="table-wrap" style="border:0">
               <table class="finish-table" id="finish-table"><tbody><tr><td>Loading…</td></tr></tbody></table>
             </div>
-            <div class="uses">
+            <div class="uses" data-content="pricing.uses" data-content-lines="div" data-content-class="use">
               <div class="use">Vanity tops</div><div class="use">Hearths</div><div class="use">Window sills</div>
               <div class="use">Shelves</div><div class="use">Chopping boards</div><div class="use">Splashbacks</div>
             </div>

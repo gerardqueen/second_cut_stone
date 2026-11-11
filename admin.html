@@ -69,6 +69,7 @@
           <button class="active" data-tab="stock">Offcuts</button>
           <button data-tab="edges">Edge finishes</button>
           <button data-tab="materials">Materials</button>
+          <button data-tab="content">Site content</button>
           <button data-tab="enquiries">Enquiries <span id="enq-badge"></span></button>
           <button data-tab="admins">Admins <span id="adm-badge"></span></button>
         </div>
@@ -155,6 +156,24 @@
             <span class="error" id="m-error" hidden></span>
           </div>
           <div class="table-wrap"><table class="table" id="m-table"></table></div>
+        </div>
+
+        <!-- Site content -->
+        <div data-pane="content" hidden>
+          <p>Change the wording and pictures on the public site. Each section saves on its own and goes live straight away; <strong>Use original</strong> puts a field back to how it was built.</p>
+          <p class="error" id="c-setup" hidden></p>
+          <div class="c-overview">
+            <div>
+              <h3 style="margin-top:0">Site overview</h3>
+              <p class="muted" style="margin-top:0">Sections from top to bottom of the home page. Pick one to jump to it.</p>
+              <nav class="c-nav" id="c-nav"></nav>
+            </div>
+            <div class="c-preview-wrap">
+              <div class="c-preview-bar"><span>Live preview</span><a href="./" target="_blank" rel="noopener">Open site ↗</a></div>
+              <div class="c-preview-frame"><iframe id="c-preview" title="Home page preview" loading="lazy"></iframe></div>
+            </div>
+          </div>
+          <div id="c-sections"></div>
         </div>
 
         <!-- Admins -->

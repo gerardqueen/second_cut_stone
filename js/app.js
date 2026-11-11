@@ -1,5 +1,6 @@
 import { SETTINGS } from './config.js';
-import { listOffcuts, listFinishes, submitEnquiry } from './data.js';
+import { listOffcuts, listFinishes, submitEnquiry, getSiteContent } from './data.js';
+import { loadContent, priceNote } from './content.js';
 import { quote, compare, fits, money } from './pricing.js';
 import { SHAPES } from './shapes.js';
 import { $, $$, esc, mm, media, swatchSVG, pieceBuilder, mountChrome } from './ui.js';
@@ -7,6 +8,7 @@ import { profileSVG, profileOf } from './profiles.js';
 
 mountChrome();
 $('#hero-stone').innerHTML = swatchSVG({ id: 'hero-stone', name: 'Nero Assoluto', material: 'Granite' }, { w: 1600, h: 760 });
+const contentReady = loadContent(getSiteContent);
 
 let OFFCUTS = [], FINISHES = [];
 let finder, detail, current = null;
@@ -23,7 +25,8 @@ async function init() {
     return;
   }
   OFFCUTS = OFFCUTS.filter((o) => o.status !== 'sold');
-  $('#price-note').textContent = SETTINGS.priceNote;
+  await contentReady;
+  $('#price-note').textContent = priceNote();
 
   // filter dropdowns
   const mats = [...new Set(OFFCUTS.map((o) => o.material))].sort();
@@ -172,7 +175,7 @@ function updateDetail() {
     ${q.edgeLines.map((e) => `<tr><td>${esc(e.label)} · ${esc(e.finish)} · ${e.metres.toFixed(2)}m × ${money(e.rate)}/m</td><td>${money(e.cost)}</td></tr>`).join('')}
     ${q.minApplied ? `<tr><td>Minimum charge applied</td><td></td></tr>` : ''}
     <tr class="total"><td>Total</td><td>${money(q.total)}</td></tr>`;
-  $('#d-note').textContent = SETTINGS.priceNote;
+  $('#d-note').textContent = priceNote();
   if (submit) submit.disabled = false;
   $('#d-ar').hidden = false;
 }

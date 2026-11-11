@@ -8,6 +8,7 @@ import {
 import { money } from './pricing.js';
 import { PROFILES, PROFILE_KEYS, profileSVG, profileOf } from './profiles.js';
 import { $, $$, esc, mm, media, mountChrome } from './ui.js';
+import { initSiteContent } from './admin-content.js';
 
 mountChrome({ admin: true });
 
@@ -130,6 +131,10 @@ $('#reset-form').addEventListener('submit', async (e) => {
 $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
   $$('[data-tab]').forEach((x) => x.classList.toggle('active', x === b));
   $$('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab));
+  if (b.dataset.tab === 'content') {
+    initSiteContent();
+    const fr = $('#c-preview'); if (fr && !fr.src) fr.src = './';
+  }
 }));
 
 async function refreshAll() {

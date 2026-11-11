@@ -105,6 +105,25 @@ export async function compressImage(file, maxSide = 1600, quality = 0.82) {
   return new Promise((res) => cv.toBlob(res, 'image/jpeg', quality));
 }
 
+/** Upload an image for the site itself (banner, logo). Bigger than offcut photos, kept as PNG if it has transparency. */
+export async function uploadSiteImage(file, maxSide = 2400) {
+  const c = await client();
+  const keepPng = file.type === 'image/png';
+  const blob = keepPng ? await compressPng(file, c ? maxSide : 600) : await compressImage(file, c ? maxSide : 900, c ? 0.85 : 0.7);
+  if (!c) return await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+  const path = `site/${uid()}.${keepPng ? 'png' : 'jpg'}`;
+  must(await c.storage.from('offcut-photos').upload(path, blob, { contentType: keepPng ? 'image/png' : 'image/jpeg', upsert: false }));
+  return c.storage.from('offcut-photos').getPublicUrl(path).data.publicUrl;
+}
+async function compressPng(file, maxSide) {
+  const img = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  return new Promise((res) => cv.toBlob(res, 'image/png'));
+}
+
 export async function uploadPhoto(file) {
   const c = await client();
   if (!c) {
@@ -145,6 +164,36 @@ export async function deleteFinish(id) {
   const c = await client();
   if (!c) { const s = load(); s.finishes = s.finishes.filter((x) => x.id !== id); save(s); return; }
   must(await c.from('edge_finishes').delete().eq('id', id));
+}
+
+// ---------------- Site content ----------------
+/** Saved wording/images as { key: value }. Empty if nothing has been changed (or the table isn't set up yet). */
+export async function getSiteContent() {
+  const c = await client();
+  if (!c) return { ...(load().content || {}) };
+  const { data, error } = await c.from('site_content').select('key, value');
+  if (error) { if (/site_content|schema cache|does not exist/i.test(error.message)) return {}; throw new Error(error.message); }
+  return Object.fromEntries(data.map((r) => [r.key, r.value]));
+}
+/** Whether the site_content table exists (admin shows a setup note if not). */
+export async function siteContentReady() {
+  const c = await client();
+  if (!c) return true;
+  const { error } = await c.from('site_content').select('key').limit(1);
+  return !error;
+}
+/** Save changes: { key: 'new text' } stores it, { key: null } goes back to the original. */
+export async function saveSiteContent(changes) {
+  const set = Object.entries(changes).filter(([, v]) => v != null && v !== '');
+  const clear = Object.entries(changes).filter(([, v]) => v == null || v === '').map(([k]) => k);
+  const c = await client();
+  if (!c) {
+    const s = load(); s.content ||= {};
+    set.forEach(([k, v]) => (s.content[k] = v)); clear.forEach((k) => delete s.content[k]);
+    save(s); return;
+  }
+  if (set.length) must(await c.from('site_content').upsert(set.map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }))));
+  if (clear.length) must(await c.from('site_content').delete().in('key', clear));
 }
 
 // ---------------- Materials ----------------

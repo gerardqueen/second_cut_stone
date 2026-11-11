@@ -38,7 +38,7 @@ export function mountChrome({ admin = false, home = true } = {}) {
         <div class="cols">
           <div>
             ${logoSVG({ stacked: true, light: true })}
-            <p style="margin-top:14px">Premium stone offcuts from the Granite Systems workshop, cut and finished to your size.</p>
+            <p style="margin-top:14px" data-footer-blurb>Premium stone offcuts from the Granite Systems workshop, cut and finished to your size.</p>
           </div>
           <div id="contact">
             <h4>Visit the yard</h4>

@@ -20,6 +20,12 @@ A piece "fits" an offcut if its bounding rectangle fits either way round, after 
 
 Admin → **Materials** holds the stones staff can pick when logging an offcut (Granite, Quartz, Slate…). Add new ones there, or choose **+ Add a new material…** in the offcut form, which adds it to the list too. Renaming a material renames it on all its offcuts; untick **Active** to hide one from the picker. Customers see a material in the filters once an offcut in it is in stock. Offcuts without a photo get a stone look based on the material (slate, travertine, limestone, sandstone, onyx, terrazzo, quartzite, porcelain and more in `js/ui.js`).
 
+## Site content (wording and pictures)
+
+Admin → **Site content** shows an overview of the home page's sections with a live preview, then an editor for each: the top banner (background photo, heading, intro, buttons), Find your cut, In the yard now, How pricing works (steps and the "things people make" tiles), the footer and contact details (plus the logo), and the Google title and description. Each section has its own **Save changes**, and the change goes live straight away. **Use original** puts a field back.
+
+Only changed items are stored (`site_content` table, `supabase/007_site_content.sql`); everything else shows the wording built into `index.html`. To make more text editable, mark it `data-content="<key>"` in the page and add the key to `SECTIONS` in `js/content.js`. Uploaded images go in the photo bucket under `site/`. Visitors' browsers keep the last-seen wording, so pages don't flash the old text.
+
 ## Enquiry email alerts
 
 The site calls the `enquiry-alert` Edge Function straight after saving each enquiry (and the daily keep-alive retries any that failed). It emails the details (reply-to set to the customer). Secrets in Supabase → Edge Functions → Secrets:
@@ -41,7 +47,7 @@ For any piece that fits (rectangle, square, circle, oval, half-moon, L-shape lef
 | Path | What it is |
 |---|---|
 | `index.html` | Customer site: cut finder, yard stock, edge pricing |
-| `admin.html` | Staff page: log/edit offcuts, edge prices, enquiries |
+| `admin.html` | Staff page: offcuts, edge prices, materials, site content, enquiries, admins |
 | `js/config.js` | Supabase keys + settings (VAT note, minimum charge, cut allowance, contact) |
 | `js/pricing.js` | All the pricing maths |
 | `js/data.js` | Supabase calls (falls back to a browser-only demo store) |
@@ -57,6 +63,9 @@ For any piece that fits (rectangle, square, circle, oval, half-moon, L-shape lef
 | `supabase/005_enquiry_alerts.sql` | Tracks which enquiries have been emailed |
 | `.github/workflows/keepalive.yml` | Pings Supabase daily so the free project never pauses; retries unsent alerts |
 | `supabase/006_materials.sql` | Managed list of materials (admin → Materials) |
+| `js/content.js` | Editable sections and fields; applies saved wording/images to the page |
+| `js/admin-content.js` | Admin → Site content tab |
+| `supabase/007_site_content.sql` | Stores changed wording and images |
 | `js/ar.js` | *Pilot:* "View in your room" — true-size 3D slab of any shape + phone AR |
 
 ## 1. Run it locally (demo mode)

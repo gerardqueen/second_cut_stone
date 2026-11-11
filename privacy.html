@@ -67,7 +67,10 @@
 
   <script type="module">
     import { mountChrome } from './js/ui.js';
+    import { getSiteContent } from './js/data.js';
+    import { loadContent } from './js/content.js';
     mountChrome({ home: false });
+    loadContent(getSiteContent, { home: false });
   </script>
 </body>
 </html>
